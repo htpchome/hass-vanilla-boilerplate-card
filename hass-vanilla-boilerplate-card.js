@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.0';
+  const CARD_VERSION = '0.1.1';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -167,23 +167,27 @@
    * Convenience wrapper for the standard `hass-action` event.
    *
    * IMPORTANT — event detail shape:
-   *   Home Assistant's handle-action mixin (handle-action.ts:39)
-   *   reads e.detail.action and then e.detail.config[action]
-   *   to find the user's tap_action / hold_action etc.
-   *   So the detail MUST be:
-   *     { action: 'tap', config: { tap_action: { ... } } }
+   *   Home Assistant's `handle-action` mixin (handle-action.ts:39)
+   *   reads `e.detail.action` and then `e.detail.config[action]`
+   *   to find the user's `tap_action` / `hold_action` etc. So the
+   *   detail MUST be:
+   *     { action: 'tap', config: { tap_action: { ...user's... } } }
+   *   NOT:
+   *     { action: 'tap', data: { config: ... } }
    *
    * @param {HTMLElement} node
    * @param {string} action        e.g. 'tap', 'hold', 'double_tap'
-   * @param {object} [actionConfig] the user's action config (tap_action
-   *                               object from YAML). Defaults to
-   *                               { action: 'none' } so HA doesn't crash
-   *                               when the user hasn't configured one.
+   * @param {object} [actionConfig] the user's action config object
+   *                               (the value of `tap_action` in YAML).
+   *                               Defaults to `{ action: 'none' }` so
+   *                               HA doesn't crash if the user has
+   *                               not configured one.
    */
   const fireHassAction = (node, action, actionConfig) => {
-    const config = (actionConfig && typeof actionConfig === 'object')
-      ? actionConfig
-      : { action: 'none' };
+    const config =
+      actionConfig && typeof actionConfig === 'object'
+        ? actionConfig
+        : { action: 'none' };
     fireEvent(node, 'hass-action', { action, config });
   };
 
