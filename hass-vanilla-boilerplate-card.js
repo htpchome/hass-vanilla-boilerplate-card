@@ -502,31 +502,36 @@
      * @param {MouseEvent} ev
      */
     handleClick(node, ev) {
+      // No-op if the user hasn't set a tap_action. This card is
+      // a content display, not a button — we only act on user
+      // clicks when explicitly configured to do so.
+      if (!this._config.tap_action) return;
       // Pass the user's `tap_action` config (e.g.
       // { action: 'navigate', navigation_path: '/lovelace/0' }).
-      // Falls back to { action: 'none' } in the helper.
       fireHassAction(node, 'tap', this._config.tap_action);
     }
 
-    /**
-     * Default hold handler.
-     *
-     * @param {HTMLElement} node
-     * @param {MouseEvent} ev
-     */
-    handleHold(node, ev) {
-      fireHassAction(node, 'hold', this._config.hold_action);
-    }
+      /**
+       * Default hold handler.
+       *
+       * @param {HTMLElement} node
+       * @param {MouseEvent} ev
+       */
+      handleHold(node, ev) {
+        if (!this._config.hold_action) return;
+        fireHassAction(node, 'hold', this._config.hold_action);
+      }
 
-    /**
-     * Default double-tap handler.
-     *
-     * @param {HTMLElement} node
-     * @param {MouseEvent} ev
-     */
-    handleDoubleClick(node, ev) {
-      fireHassAction(node, 'double_tap', this._config.double_tap_action);
-    }
+      /**
+       * Default double-tap handler.
+       *
+       * @param {HTMLElement} node
+       * @param {MouseEvent} ev
+       */
+      handleDoubleClick(node, ev) {
+        if (!this._config.double_tap_action) return;
+        fireHassAction(node, 'double_tap', this._config.double_tap_action);
+      }
 
     /**
      * Convenience: safely read a state value from hass, returning
@@ -994,23 +999,38 @@
       }
 
       // Mount container for re-rendered content.
+      //
+      // IMPORTANT: this card is a content display, not a button. By
+      // default we attach NO interaction listeners at all — that way
+      // Home Assistant doesn't intercept clicks with its own
+      // "more-info" dialog or treat the card as a tap target.
+      //
+      // Interaction listeners are wired up *only* when the user has
+      // explicitly configured a `tap_action` / `hold_action` /
+      // `double_tap_action` in their YAML. The controller's handlers
+      // are no-ops if the corresponding action isn't set.
       if (!root.querySelector('[data-card-host]')) {
         const host = document.createElement('div');
         host.setAttribute('data-card-host', '');
-        // All interaction events delegate to the controller, which
-        // knows how to translate them into a properly-shaped
-        // `hass-action` event (with detail.config holding the user's
-        // tap_action / hold_action / double_tap_action object).
-        host.addEventListener('click', (ev) => {
-          this._controller.handleClick(this, ev);
-        });
-        host.addEventListener('contextmenu', (ev) => {
-          ev.preventDefault();
-          this._controller.handleHold(this, ev);
-        });
-        host.addEventListener('dblclick', (ev) => {
-          this._controller.handleDoubleClick(this, ev);
-        });
+
+        const cfg = this._controller.config || {};
+        if (cfg.tap_action) {
+          host.addEventListener('click', (ev) => {
+            this._controller.handleClick(this, ev);
+          });
+        }
+        if (cfg.hold_action) {
+          host.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            this._controller.handleHold(this, ev);
+          });
+        }
+        if (cfg.double_tap_action) {
+          host.addEventListener('dblclick', (ev) => {
+            this._controller.handleDoubleClick(this, ev);
+          });
+        }
+
         root.appendChild(host);
       }
     }

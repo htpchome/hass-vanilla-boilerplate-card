@@ -151,31 +151,36 @@ export class CardController {
    * @param {MouseEvent} ev
    */
   handleClick(node, ev) {
+    // No-op if the user hasn't set a tap_action. This card is
+    // a content display, not a button — we only act on user
+    // clicks when explicitly configured to do so.
+    if (!this._config.tap_action) return;
     // Pass the user's `tap_action` config (e.g.
     // { action: 'navigate', navigation_path: '/lovelace/0' }).
-    // Falls back to { action: 'none' } in the helper.
     fireHassAction(node, 'tap', this._config.tap_action);
   }
 
-  /**
-   * Default hold handler.
-   *
-   * @param {HTMLElement} node
-   * @param {MouseEvent} ev
-   */
-  handleHold(node, ev) {
-    fireHassAction(node, 'hold', this._config.hold_action);
-  }
+    /**
+     * Default hold handler.
+     *
+     * @param {HTMLElement} node
+     * @param {MouseEvent} ev
+     */
+    handleHold(node, ev) {
+      if (!this._config.hold_action) return;
+      fireHassAction(node, 'hold', this._config.hold_action);
+    }
 
-  /**
-   * Default double-tap handler.
-   *
-   * @param {HTMLElement} node
-   * @param {MouseEvent} ev
-   */
-  handleDoubleClick(node, ev) {
-    fireHassAction(node, 'double_tap', this._config.double_tap_action);
-  }
+    /**
+     * Default double-tap handler.
+     *
+     * @param {HTMLElement} node
+     * @param {MouseEvent} ev
+     */
+    handleDoubleClick(node, ev) {
+      if (!this._config.double_tap_action) return;
+      fireHassAction(node, 'double_tap', this._config.double_tap_action);
+    }
 
   /**
    * Convenience: safely read a state value from hass, returning

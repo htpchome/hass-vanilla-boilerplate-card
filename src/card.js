@@ -161,23 +161,38 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     }
 
     // Mount container for re-rendered content.
+    //
+    // IMPORTANT: this card is a content display, not a button. By
+    // default we attach NO interaction listeners at all — that way
+    // Home Assistant doesn't intercept clicks with its own
+    // "more-info" dialog or treat the card as a tap target.
+    //
+    // Interaction listeners are wired up *only* when the user has
+    // explicitly configured a `tap_action` / `hold_action` /
+    // `double_tap_action` in their YAML. The controller's handlers
+    // are no-ops if the corresponding action isn't set.
     if (!root.querySelector('[data-card-host]')) {
       const host = document.createElement('div');
       host.setAttribute('data-card-host', '');
-      // All interaction events delegate to the controller, which
-      // knows how to translate them into a properly-shaped
-      // `hass-action` event (with detail.config holding the user's
-      // tap_action / hold_action / double_tap_action object).
-      host.addEventListener('click', (ev) => {
-        this._controller.handleClick(this, ev);
-      });
-      host.addEventListener('contextmenu', (ev) => {
-        ev.preventDefault();
-        this._controller.handleHold(this, ev);
-      });
-      host.addEventListener('dblclick', (ev) => {
-        this._controller.handleDoubleClick(this, ev);
-      });
+
+      const cfg = this._controller.config || {};
+      if (cfg.tap_action) {
+        host.addEventListener('click', (ev) => {
+          this._controller.handleClick(this, ev);
+        });
+      }
+      if (cfg.hold_action) {
+        host.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+          this._controller.handleHold(this, ev);
+        });
+      }
+      if (cfg.double_tap_action) {
+        host.addEventListener('dblclick', (ev) => {
+          this._controller.handleDoubleClick(this, ev);
+        });
+      }
+
       root.appendChild(host);
     }
   }
