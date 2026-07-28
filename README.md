@@ -1,0 +1,1 @@
+# hass-vanilla-boilerplate-card
