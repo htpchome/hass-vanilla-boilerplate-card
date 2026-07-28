@@ -151,7 +151,10 @@ export class CardController {
    * @param {MouseEvent} ev
    */
   handleClick(node, ev) {
-    fireHassAction(node, 'tap', { config: this._config });
+    // Pass the user's `tap_action` config (e.g.
+    // { action: 'navigate', navigation_path: '/lovelace/0' }).
+    // Falls back to { action: 'none' } in the helper.
+    fireHassAction(node, 'tap', this._config.tap_action);
   }
 
   /**
@@ -161,7 +164,17 @@ export class CardController {
    * @param {MouseEvent} ev
    */
   handleHold(node, ev) {
-    fireHassAction(node, 'hold', { config: this._config });
+    fireHassAction(node, 'hold', this._config.hold_action);
+  }
+
+  /**
+   * Default double-tap handler.
+   *
+   * @param {HTMLElement} node
+   * @param {MouseEvent} ev
+   */
+  handleDoubleClick(node, ev) {
+    fireHassAction(node, 'double_tap', this._config.double_tap_action);
   }
 
   /**

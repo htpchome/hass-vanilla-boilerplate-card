@@ -155,12 +155,29 @@ export const fireEvent = (node, type, detail = {}, bubbles = true) => {
 /**
  * Convenience wrapper for the standard `hass-action` event.
  *
+ * IMPORTANT — event detail shape:
+ *   Home Assistant's `handle-action` mixin (handle-action.ts:39)
+ *   reads `e.detail.action` and then `e.detail.config[action]`
+ *   to find the user's `tap_action` / `hold_action` etc. So the
+ *   detail MUST be:
+ *     { action: 'tap', config: { tap_action: { ...user's... } } }
+ *   NOT:
+ *     { action: 'tap', data: { config: ... } }
+ *
  * @param {HTMLElement} node
- * @param {string} action  e.g. 'tap', 'hold', 'double_tap'
- * @param {object} [data]
+ * @param {string} action        e.g. 'tap', 'hold', 'double_tap'
+ * @param {object} [actionConfig] the user's action config object
+ *                               (the value of `tap_action` in YAML).
+ *                               Defaults to `{ action: 'none' }` so
+ *                               HA doesn't crash if the user has
+ *                               not configured one.
  */
-export const fireHassAction = (node, action, data = {}) => {
-  fireEvent(node, 'hass-action', { action, data });
+export const fireHassAction = (node, action, actionConfig) => {
+  const config =
+    actionConfig && typeof actionConfig === 'object'
+      ? actionConfig
+      : { action: 'none' };
+  fireEvent(node, 'hass-action', { action, config });
 };
 
 /**

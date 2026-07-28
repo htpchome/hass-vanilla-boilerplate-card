@@ -166,12 +166,25 @@
   /**
    * Convenience wrapper for the standard `hass-action` event.
    *
+   * IMPORTANT — event detail shape:
+   *   Home Assistant's handle-action mixin (handle-action.ts:39)
+   *   reads e.detail.action and then e.detail.config[action]
+   *   to find the user's tap_action / hold_action etc.
+   *   So the detail MUST be:
+   *     { action: 'tap', config: { tap_action: { ... } } }
+   *
    * @param {HTMLElement} node
-   * @param {string} action  e.g. 'tap', 'hold', 'double_tap'
-   * @param {object} [data]
+   * @param {string} action        e.g. 'tap', 'hold', 'double_tap'
+   * @param {object} [actionConfig] the user's action config (tap_action
+   *                               object from YAML). Defaults to
+   *                               { action: 'none' } so HA doesn't crash
+   *                               when the user hasn't configured one.
    */
-  const fireHassAction = (node, action, data = {}) => {
-    fireEvent(node, 'hass-action', { action, data });
+  const fireHassAction = (node, action, actionConfig) => {
+    const config = (actionConfig && typeof actionConfig === 'object')
+      ? actionConfig
+      : { action: 'none' };
+    fireEvent(node, 'hass-action', { action, config });
   };
 
   /**
@@ -485,7 +498,10 @@
      * @param {MouseEvent} ev
      */
     handleClick(node, ev) {
-      fireHassAction(node, 'tap', { config: this._config });
+      // Pass the user's `tap_action` config (e.g.
+      // { action: 'navigate', navigation_path: '/lovelace/0' }).
+      // Falls back to { action: 'none' } in the helper.
+      fireHassAction(node, 'tap', this._config.tap_action);
     }
 
     /**
@@ -495,7 +511,17 @@
      * @param {MouseEvent} ev
      */
     handleHold(node, ev) {
-      fireHassAction(node, 'hold', { config: this._config });
+      fireHassAction(node, 'hold', this._config.hold_action);
+    }
+
+    /**
+     * Default double-tap handler.
+     *
+     * @param {HTMLElement} node
+     * @param {MouseEvent} ev
+     */
+    handleDoubleClick(node, ev) {
+      fireHassAction(node, 'double_tap', this._config.double_tap_action);
     }
 
     /**
@@ -967,13 +993,19 @@
       if (!root.querySelector('[data-card-host]')) {
         const host = document.createElement('div');
         host.setAttribute('data-card-host', '');
+        // All interaction events delegate to the controller, which
+        // knows how to translate them into a properly-shaped
+        // `hass-action` event (with detail.config holding the user's
+        // tap_action / hold_action / double_tap_action object).
         host.addEventListener('click', (ev) => {
-          // Surface a tap event up to HA via the standard helper.
-          fireHassAction(this, 'tap', { config: this._controller.config });
+          this._controller.handleClick(this, ev);
         });
         host.addEventListener('contextmenu', (ev) => {
           ev.preventDefault();
-          fireHassAction(this, 'hold', { config: this._controller.config });
+          this._controller.handleHold(this, ev);
+        });
+        host.addEventListener('dblclick', (ev) => {
+          this._controller.handleDoubleClick(this, ev);
         });
         root.appendChild(host);
       }

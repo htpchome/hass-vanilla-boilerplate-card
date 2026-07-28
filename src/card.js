@@ -27,7 +27,6 @@ import {
 import { CardController } from './controller.js';
 import { buildCardHtml } from './factory.js';
 import {
-  fireHassAction,
   renderErrorMessage,
   warnOnce,
 } from './helpers.js';
@@ -165,13 +164,19 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     if (!root.querySelector('[data-card-host]')) {
       const host = document.createElement('div');
       host.setAttribute('data-card-host', '');
+      // All interaction events delegate to the controller, which
+      // knows how to translate them into a properly-shaped
+      // `hass-action` event (with detail.config holding the user's
+      // tap_action / hold_action / double_tap_action object).
       host.addEventListener('click', (ev) => {
-        // Surface a tap event up to HA via the standard helper.
-        fireHassAction(this, 'tap', { config: this._controller.config });
+        this._controller.handleClick(this, ev);
       });
       host.addEventListener('contextmenu', (ev) => {
         ev.preventDefault();
-        fireHassAction(this, 'hold', { config: this._controller.config });
+        this._controller.handleHold(this, ev);
+      });
+      host.addEventListener('dblclick', (ev) => {
+        this._controller.handleDoubleClick(this, ev);
       });
       root.appendChild(host);
     }
