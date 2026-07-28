@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# --- HASS Vanilla Boilerplate Card ---
+# Local dev environment file
+.clineinstructions.local
+
+# IDE / editor cruft
+.idea/
+*.swp
+.DS_Store
+
+# Rollup build output — the bundle is committed for HACS but
+# sourcemaps from local dev builds are not.
+*.map
+!.vscode/
+!.github/

@@ -1,0 +1,118 @@
+Act as an expert Home Assistant frontend developer. Build a production-ready custom Lovelace card boilerplate using modern Vanilla JavaScript (ES6 classes, shadow DOM, custom elements). The codebase must be fully modular and organized into a `/src` directory.
+
+Please provide the code for the following comprehensive file structure:
+
+1. /src/constants.js
+   - Exports configuration defaults, action strings, and internal layout types.
+   - Centralizes all static keys and magic strings used across the card.
+
+2. /src/helpers.js
+   - Exports common utility functions used across the card lifecycle.
+   - Includes helper functions for text localization/formatting, safety state checks, handling custom click actions (using fireEvent), and generating robust error boundaries or warnings if an entity is missing.
+
+3. /src/styles.js
+   - Exports native CSS template literals for component styling.
+   - MANDATORY: Must strictly use native Home Assistant design tokens and CSS variables to ensure perfect, automatic theme synchronization. This includes tokens like `--primary-text-color`, `--secondary-text-color`, `--card-background-color`, `--ha-card-background`, `--ha-card-border-radius`, `--ha-card-border-width`, and `--primary-color`.
+
+4. /src/icons.js
+   - Exports SVG paths or helper functions that dynamically map to Home Assistant's <ha-icon> tags.
+   - Provides a centralized dictionary for all icons used in tabs, controls, or status indicators.
+
+5. /src/router.js
+   - Implements a lightweight internal routing mechanism or state machine.
+   - Handles switching between different views/tabs inside the card based on user interaction or internal state.
+
+6. /src/controller.js
+   - Handles business logic, click/interaction events, and processes updates from the Home Assistant 'hass' object.
+   - Exposes clean methods to update the card UI when entities change, using constants and data fields.
+
+7. /src/factory.js
+   - Implements a creational factory pattern.
+   - Dynamically generates sub-components, status cards, or specific UI layouts by pulling assets from icons.js, using helpers.js for safety, and applying template chunks from styles.js based on configuration.
+
+8. /src/card.js
+   - The primary custom element representing the card itself.
+   - Imports and initializes the constants, helpers, styles, router, controller, and factory modules.
+   - Implements standard Lovelace card lifecycle methods: setConfig(config) and set hass(hass).
+   - Registers the card to `window.customCards` so it appears natively in the Home Assistant card picker dialog with a name, description, and preview capability.
+
+9. /src/editor.js
+   - The visual GUI configuration element mapped via main-card's `getConfigElement()`.
+   - Dispatches the native 'config-changed' event to update the Lovelace UI dashboard whenever a form input changes.
+   - Linked to `getStubConfig()` in the main card to populate default parameters in the picker.
+   - Form controls should also use standard HA styling tokens 
+
+Requirements:
+
+- Use clean, modern vanilla JS (ES6 modules via standard imports/exports).
+- Use shadow DOM encapsulation for scoping styles.
+- Ensure strict separation of concerns: views do not handle logic, logic does not generate raw HTML strings directly.
+- Prefer Async
+- **State Access:** Prefer directly reading from the `hass.states` object context rather than attempting to bypass the `hass` integration layer.
+- **Async/Await:** All calls to Home Assistant's backend and fetch requests must use `async/await` with proper `try...catch` blocks for error handling.
+- **Variables:** Use `const` by default;
+- **Naming Conventions:** Use camelCase for variables and functions. Use kebab-case for custom component element names (e.g., `my-custom-card.js`).
+- **Functions:** Prefer arrow functions by default for callbacks and array methods, but avoid them for class/object methods, constructors, and any function that relies on hoisting or dynamic `this` binding.
+
+## Boilerplate Structure
+
+Generate the following file tree and populate each file completely without placeholders:
+├── hacs.json # HACS repository metadata
+├── README.md # Installation and usage instructions
+├── package.json
+├── hass-vanilla-boilerplate-card.js # Location of built code
+└── src/  
+   ├── card.js # Main card logic
+   ├── editor.js # Visual configuration editor element
+   ├── helpers.js # Helpers
+   ├── icons.js # Icons MDI SVGs
+   ├── controller.js # controller code
+   ├── factory.js # factory code
+   ├── styles.js # css styles
+   ├── constants.js # Const
+   └── router.js # page routing (there may only be a single page now, but there will be more added)
+
+## Home Assistant requires custom cards to be built using standard browser Web Components. The core lifecycle handles the state orchestration entirely:
+
+- setConfig(config): Called once when the card loads or when the YAML configuration changes. You use this to store your card's user settings.set
+- hass(hass): Called continuously by Home Assistant whenever any state in the system changes. This is where your card updates its internal tracking and triggers UI re-renders.
+- fireEvent: To execute actions, your card dispatches a standard DOM event (hass-action or a call-service request), which Home Assistant intercepts to handle the backend processing.
+
+## CARD BASICS
+
+1. Editor Experience
+
+- The Editor will have the following configurable options:
+  - Title
+  - Subtitle
+  - Content (markup)
+- Editor will use default Home Assistant components such as <ha-input> over regular <input>. If the Home Assistant components are not able to be used, then the resulting formatting should mimick the Home Assistant Component (https://design.home-assistant.io/#concepts/home)
+
+2.  Card
+
+- The Card will be a simple display of a <div id="card-wrapper" class="card-wrapper"><div>Header</div><div>Content</div><div>footer</div></div> With Title and Subtitle (on seperate lines) in the Header and Content (markup) in the Content area. The Footer will have our version number.
+
+IE -
+...
+    return html`
+      <div class="card-header">
+        ${title ? html`<h2 class="card-title">${title}</h2>` : ''}
+        ${subtitle ? html`<p class="card-subtitle">${subtitle}</p>` : ''}
+        ${showDateTime ? html`<div class="card-datetime">${this._formatDateTime()}</div>` : ''}
+      </div>
+    `;
+...    
+    return html`
+      <div class="card-content">
+        ${unsafeHTML(content)}
+      </div>
+    `;
+...
+    return html`
+      <div class="card-footer">
+        Footer
+      </div>
+    `;
+
+
+Are there any questions or concerns with this outline?

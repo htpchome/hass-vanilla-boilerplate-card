@@ -1,0 +1,17 @@
+{
+  "name": "HASS Vanilla Boilerplate Card",
+  "render_readme": true,
+  "filename": "hass-vanilla-boilerplate-card.js",
+  "country": ["US"],
+  "description": "A production-ready vanilla JavaScript Home Assistant Lovelace card boilerplate. Provides a modular /src layout (constants, helpers, styles, icons, router, controller, factory, card, editor) bundled to a single HACS-compatible file.",
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "card",
+    "custom-card",
+    "vanilla-js",
+    "web-components",
+    "boilerplate",
+    "hacs"
+  ]
+}

@@ -1,0 +1,171 @@
+/**
+ * styles.js
+ * ---------------------------------------------------------------
+ * Native CSS template literals for component styling.
+ *
+ * MANDATORY:
+ *   All values must come from Home Assistant's own CSS custom
+ *   properties / design tokens. This guarantees automatic theme
+ *   synchronization (light, dark, and any user-defined theme).
+ *
+ *   Tokens used:
+ *     - --primary-text-color
+ *     - --secondary-text-color
+ *     - --card-background-color
+ *     - --ha-card-background
+ *     - --ha-card-border-radius
+ *     - --ha-card-border-width
+ *     - --primary-color
+ *     - --divider-color (supplementary)
+ *     - --error-color   (supplementary)
+ * ---------------------------------------------------------------
+ */
+
+// Card root — wraps everything and inherits HA surface colors.
+export const baseStyles = `
+  :host {
+    display: block;
+    /* Inherit HA font stack + sizing */
+    font-family: var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--primary-text-color);
+    box-sizing: border-box;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+
+  ha-card {
+    display: block;
+    background: var(--ha-card-background, var(--card-background-color));
+    border-radius: var(--ha-card-border-radius, 12px);
+    border-width: var(--ha-card-border-width, 1px);
+    border-style: solid;
+    border-color: var(--divider-color, transparent);
+    padding: 0;
+    overflow: hidden;
+  }
+`;
+
+// Card wrapper — the grid that holds header / content / footer.
+export const cardStyles = `
+  .card-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 16px 8px 16px;
+    border-bottom: 1px solid var(--divider-color, transparent);
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--primary-text-color);
+    line-height: 1.2;
+  }
+
+  .card-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--secondary-text-color);
+    line-height: 1.3;
+  }
+
+  .card-content {
+    padding: 16px;
+    color: var(--primary-text-color);
+    /* Allow user-supplied HTML to be styled by its own CSS */
+  }
+
+  .card-content p:first-child { margin-top: 0; }
+  .card-content p:last-child  { margin-bottom: 0; }
+
+  .card-footer {
+    padding: 8px 16px 12px 16px;
+    font-size: 0.75rem;
+    color: var(--secondary-text-color);
+    text-align: right;
+    border-top: 1px solid var(--divider-color, transparent);
+  }
+`;
+
+// Error / status messaging.
+export const statusStyles = `
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    color: var(--error-color, #b71c1c);
+    background: var(--ha-card-background, var(--card-background-color));
+    border: 1px solid var(--error-color, #b71c1c);
+    border-radius: var(--ha-card-border-radius, 12px);
+    font-size: 0.875rem;
+  }
+
+  .error-message ha-icon {
+    --mdc-icon-size: 20px;
+    color: var(--error-color, #b71c1c);
+  }
+`;
+
+// Editor styles — mimic HA's editor chrome.
+export const editorStyles = `
+  :host {
+    display: block;
+    padding: 12px 0;
+  }
+
+  .editor-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .editor-row label {
+    font-size: 0.875rem;
+    color: var(--secondary-text-color);
+    font-weight: 500;
+  }
+
+  .editor-row ha-input,
+  .editor-row ha-textarea {
+    width: 100%;
+    --mdc-theme-primary: var(--primary-color);
+    --mdc-text-field-fill-color: var(--card-background-color);
+    --mdc-text-field-ink-color: var(--primary-text-color);
+    --mdc-text-field-label-ink-color: var(--secondary-text-color);
+  }
+
+  .editor-help {
+    margin-top: -8px;
+    margin-bottom: 16px;
+    font-size: 0.75rem;
+    color: var(--secondary-text-color);
+  }
+`;
+
+/**
+ * Master style block injected into every card shadow root.
+ * Exported as a single tagged-template-friendly array of strings so
+ * downstream code can `join('')` or stream into a <style> tag.
+ */
+export const allStyles = [
+  baseStyles,
+  cardStyles,
+  statusStyles,
+].join('\n');
+
+export const allEditorStyles = [baseStyles, editorStyles, statusStyles].join('\n');
