@@ -772,8 +772,17 @@
     touch-action: manipulation;
   }
 
-  .${DPAD_BTN_CLASS}:hover {
-    color: rgba(180, 180, 180, 0.9);
+  /* Hover effect is scoped to devices with a real pointing
+     device (mouse, trackpad, stylus). On touch screens the
+     hover state would otherwise stick after a tap because the
+     finger remains over the button at the last tap location
+     until the user touches elsewhere. The press state is still
+     driven by the is-pressed class (JS), which works correctly
+     on both touch and mouse. */
+  @media (hover: hover) {
+    .${DPAD_BTN_CLASS}:hover {
+      color: rgba(180, 180, 180, 0.9);
+    }
   }
 
   .${DPAD_BTN_CLASS}:focus-visible {
