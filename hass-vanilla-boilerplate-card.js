@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.19';
+  const CARD_VERSION = '0.1.20';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -813,7 +813,7 @@
     margin: auto;
     /* The raised dark disc around the mic. */
     background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
-    border: 1px solid rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--dpad-text-1);
     border-radius: 50%;
     color: var(--dpad-text-2);
   }
