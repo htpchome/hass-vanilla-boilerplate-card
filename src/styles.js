@@ -60,11 +60,24 @@ export const cardStyles = `
   }
 
   .card-header {
+    display: block;
+    padding: 16px 16px 8px 16px;
+    border-bottom: 1px solid var(--divider-color, transparent);
+  }
+
+  .card-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .card-header__text {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 16px 16px 8px 16px;
-    border-bottom: 1px solid var(--divider-color, transparent);
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .card-title {
@@ -97,6 +110,41 @@ export const cardStyles = `
     color: var(--secondary-text-color);
     text-align: right;
     border-top: 1px solid var(--divider-color, transparent);
+  }
+`;
+
+// Header nav arrow button — used to switch between internal views.
+export const navStyles = `
+  .card-nav-arrow {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+
+  .card-nav-arrow:hover,
+  .card-nav-arrow:focus-visible {
+    background: var(--divider-color, rgba(127, 127, 127, 0.12));
+    color: var(--primary-text-color);
+    outline: none;
+  }
+
+  .card-nav-arrow:active {
+    background: var(--divider-color, rgba(127, 127, 127, 0.2));
+  }
+
+  .card-nav-arrow__icon {
+    --mdc-icon-size: 24px;
   }
 `;
 
@@ -165,6 +213,7 @@ export const editorStyles = `
 export const allStyles = [
   baseStyles,
   cardStyles,
+  navStyles,
   statusStyles,
 ].join('\n');
 

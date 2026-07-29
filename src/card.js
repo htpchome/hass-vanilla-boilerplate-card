@@ -163,21 +163,46 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     // Mount container for re-rendered content.
     //
     // IMPORTANT: this card is a content display, not a button. By
-    // default we attach NO interaction listeners at all — that way
+    // default we attach NO tap-action listeners at all — that way
     // Home Assistant doesn't intercept clicks with its own
     // "more-info" dialog or treat the card as a tap target.
     //
-    // Interaction listeners are wired up *only* when the user has
-    // explicitly configured a `tap_action` / `hold_action` /
-    // `double_tap_action` in their YAML. The controller's handlers
-    // are no-ops if the corresponding action isn't set.
+    // Two kinds of listeners may be attached:
+    //   1. Internal header-nav arrow clicks (always wired up).
+    //      These route through `router.navigate()` and never
+    //      dispatch hass-action events.
+    //   2. Optional tap_action / hold_action / double_tap_action
+    //      listeners (only attached when the user has configured
+    //      them in YAML). The controller's handlers are no-ops
+    //      if the corresponding action isn't set.
     if (!root.querySelector('[data-card-host]')) {
       const host = document.createElement('div');
       host.setAttribute('data-card-host', '');
 
+      // (1) Internal header-nav arrow click delegation.
+      //     Triggered by factory.js's <button data-card-nav="...">
+      //     elements in the header.
+      host.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (!(target instanceof Element)) return;
+        const btn = target.closest('[data-card-nav]');
+        if (!btn || !host.contains(btn)) return;
+        const view = btn.getAttribute('data-card-nav');
+        if (view) router.navigate(view);
+      });
+
+      // (2) Optional user-configured tap actions.
       const cfg = this._controller.config || {};
       if (cfg.tap_action) {
+        // Tap action is added at the host level so the user can tap
+        // anywhere on the card. We skip the nav arrow buttons so a
+        // tap on the arrow navigates internally, not to the
+        // tap_action.
         host.addEventListener('click', (ev) => {
+          const target = ev.target;
+          if (target instanceof Element && target.closest('[data-card-nav]')) {
+            return; // nav arrow click — handled above
+          }
           this._controller.handleClick(this, ev);
         });
       }

@@ -565,6 +565,78 @@
   }
 
   /**
+   * icons.js
+   * ---------------------------------------------------------------
+   * Centralized dictionary of Material Design Icons (MDI) used by
+   * the card and its editor. We store *names*, not raw SVG paths,
+   * because Home Assistant ships <ha-icon> natively which resolves
+   * the MDI glyph set automatically. That keeps the card bundle
+   * tiny and ensures icons match the rest of the HA UI.
+   *
+   * If you ever need to render an SVG path manually, drop a path
+   * string into the SVG_PATHS map below and call `getIconPath()`.
+   * ---------------------------------------------------------------
+   */
+
+  // MDI icon *names* (used with <ha-icon icon="mdi:...">)
+  const ICON_NAMES = Object.freeze({
+    CARD: 'mdi:card-outline',
+    EDIT: 'mdi:pencil',
+    ALERT: 'mdi:alert-circle',
+    CHECK: 'mdi:check-circle',
+    HOME: 'mdi:home',
+    SETTINGS: 'mdi:cog',
+    REFRESH: 'mdi:refresh',
+    // Internal-card navigation arrows (used by the header nav
+    // buttons the factory renders to switch between views).
+    ARROW_RIGHT: 'mdi:chevron-right',
+    ARROW_LEFT: 'mdi:chevron-left',
+  });
+
+  // Inline SVG path data — only used if you need a fully offline
+  // render. The strings are deliberately simple to keep this
+  // module readable; expand as your card needs grow.
+  Object.freeze({
+    [ICON_NAMES.CARD]:
+      'M2 4h20v16H2z M4 8h16 M4 12h16 M4 16h10', // card outline
+    [ICON_NAMES.ALERT]:
+      'M12 2 L22 20 L2 20 Z M12 9v5 M12 17h.01', // triangle exclamation
+    [ICON_NAMES.CHECK]:
+      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M7 12l3 3 7-7', // circle check
+  });
+
+  /**
+   * Convenience accessor — return the MDI name for a logical key.
+   *
+   * @param {string} key
+   * @returns {string|undefined}
+   */
+  const getIcon = (key) => ICON_NAMES[key];
+
+  /**
+   * Render an <ha-icon> element for the given logical key.
+   * Returned as a raw string for easy template interpolation.
+   *
+   * @param {string} key
+   * @param {object} [opts]
+   * @param {string} [opts.className]
+   * @param {Record<string,string>} [opts.attrs] extra HTML attrs
+   *        (e.g. `{ 'data-card-nav': 'main' }`).
+   * @returns {string}
+   */
+  const renderIcon = (key, opts = {}) => {
+    const name = getIcon(key);
+    if (!name) return '';
+    const cls = opts.className ? ` class="${opts.className}"` : '';
+    const attrs = opts.attrs
+      ? ' ' + Object.entries(opts.attrs)
+          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '"')}"`)
+          .join(' ')
+      : '';
+    return `<ha-icon icon="${name}"${cls}${attrs}></ha-icon>`;
+  };
+
+  /**
    * factory.js
    * ---------------------------------------------------------------
    * Creational factory pattern.
@@ -572,37 +644,85 @@
    * The factory takes a `view-model` (a plain object emitted by the
    * controller) and produces the HTML string that the card inserts
    * into its shadow DOM. It pulls in:
-   *   - icons.js   for any decorative <ha-icon> elements
+   *   - icons.js   for decorative <ha-icon> elements (incl. nav arrows)
    *   - helpers.js for safety (escapeHtml, etc.)
-   *   - styles.js  indirectly — the card injects styles itself;
+   *   - styles.js  indirectly \u2014 the card injects styles itself;
    *                the factory only emits *class* hooks
    *
    * The factory never touches `hass` or `this`. It is a pure
-   * function of its input — easy to test and easy to reason about.
+   * function of its input \u2014 easy to test and easy to reason about.
    * ---------------------------------------------------------------
    */
 
+
+  // CSS class hook + data attribute for the header nav arrow
+  // buttons. The card wires up click handlers via event delegation
+  // on the host, using [data-card-nav="<target-view>"].
+  const NAV_CLASS = 'card-nav-arrow';
+  const NAV_DATA_TARGET = 'data-card-nav';
 
   // ----------------------------------------------------------------
   // Section builders
   // ----------------------------------------------------------------
 
   /**
-   * Build the card header (title + optional subtitle).
+   * Build a navigation arrow button for the header. The arrow points
+   * forward (right) on the main view, and back (left) on any other
+   * view. Clicking it asks the router to navigate to `targetView`.
    *
-   * @param {{title:string, subtitle:string}} vm
+   * The button is rendered as a bare <ha-icon> wrapped in a <button>
+   * so it's keyboard-focusable and announces its role correctly.
+   *
+   * @param {string} targetView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL
+   * @returns {string} raw HTML
+   */
+  const buildNavArrow = (targetView) => {
+    const isBack = targetView === LAYOUTS.MAIN;
+    const iconKey = isBack ? 'ARROW_LEFT' : 'ARROW_RIGHT';
+    const label = isBack ? 'Back' : 'Next';
+    return (
+      '<button type="button" class="' + NAV_CLASS + '" ' +
+        NAV_DATA_TARGET + '="' + escapeHtml(targetView) + '" ' +
+        'aria-label="' + label + '">' +
+        renderIcon(iconKey, { className: NAV_CLASS + '__icon' }) +
+      '</button>'
+    );
+  };
+
+  /**
+   * Build the card header (title + subtitle + optional nav arrow).
+   *
+   * @param {{title:string, subtitle:string, view:string}} vm
    * @returns {string} raw HTML
    */
   const buildHeader = (vm) => {
     const hasTitle = Boolean(vm.title);
     const hasSubtitle = Boolean(vm.subtitle);
     if (!hasTitle && !hasSubtitle) return '';
-    return `
-    <div class="${REGIONS.HEADER}">
-      ${hasTitle ? `<h2 class="${REGIONS.TITLE}">${escapeHtml(vm.title)}</h2>` : ''}
-      ${hasSubtitle ? `<p class="${REGIONS.SUBTITLE}">${escapeHtml(vm.subtitle)}</p>` : ''}
-    </div>
-  `;
+
+    // Decide which arrow to show based on the current view:
+    //   - LAYOUTS.MAIN     -> right arrow pointing to LAYOUTS.DETAIL
+    //   - LAYOUTS.DETAIL   -> left arrow pointing back to LAYOUTS.MAIN
+    //   - LAYOUTS.SETTINGS -> left arrow pointing back to LAYOUTS.MAIN
+    //     (settings is reserved for future use; behaves like detail)
+    let navArrow = '';
+    if (vm.view === LAYOUTS.MAIN) {
+      navArrow = buildNavArrow(LAYOUTS.DETAIL);
+    } else if (vm.view === LAYOUTS.DETAIL || vm.view === LAYOUTS.SETTINGS) {
+      navArrow = buildNavArrow(LAYOUTS.MAIN);
+    }
+
+    return (
+      '<div class="' + REGIONS.HEADER + '">' +
+        '<div class="' + REGIONS.HEADER + '__row">' +
+          '<div class="' + REGIONS.HEADER + '__text">' +
+            (hasTitle ? '<h2 class="' + REGIONS.TITLE + '">' + escapeHtml(vm.title) + '</h2>' : '') +
+            (hasSubtitle ? '<p class="' + REGIONS.SUBTITLE + '">' + escapeHtml(vm.subtitle) + '</p>' : '') +
+          '</div>' +
+          navArrow +
+        '</div>' +
+      '</div>'
+    );
   };
 
   /**
@@ -615,12 +735,21 @@
    */
   const buildContent = (vm) => {
     const html = typeof vm.content === 'string' ? vm.content : '';
-    return `
-    <div class="${REGIONS.CONTENT}">
-      ${html}
-    </div>
-  `;
+    return (
+      '<div class="' + REGIONS.CONTENT + '">' +
+        html +
+      '</div>'
+    );
   };
+
+  /**
+   * Build an empty content area \u2014 used by views that intentionally
+   * have no user content (e.g. a static landing page).
+   *
+   * @returns {string} raw HTML
+   */
+  const buildEmptyContent = () =>
+    '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--empty"></div>';
 
   /**
    * Build the card footer (currently just the version string).
@@ -628,11 +757,8 @@
    * @param {{version:string}} vm
    * @returns {string} raw HTML
    */
-  const buildFooter = (vm) => `
-  <div class="${REGIONS.FOOTER}">
-    v${escapeHtml(vm.version)}
-  </div>
-`;
+  const buildFooter = (vm) =>
+    '<div class="' + REGIONS.FOOTER + '">v' + escapeHtml(vm.version) + '</div>';
 
   // ----------------------------------------------------------------
   // Top-level factory
@@ -645,36 +771,42 @@
    * @returns {string} raw HTML
    */
   const buildCardHtml = (vm) => {
-    // The single-page card is always LAYOUTS.MAIN today, but the
-    // factory is structured so additional views can be added by
-    // switching on `vm.view`.
     switch (vm.view) {
       case LAYOUTS.DETAIL:
+        // Static secondary page: same header + footer as the main
+        // view, but the content <div> is empty.
+        return (
+          '<ha-card>' +
+            '<div class="' + REGIONS.CARD_WRAPPER + '">' +
+              buildHeader(vm) +
+              buildEmptyContent() +
+              buildFooter(vm) +
+            '</div>' +
+          '</ha-card>'
+        );
       case LAYOUTS.SETTINGS:
-        // Reserved for future expansion. Fall through to a minimal
-        // placeholder so the card never renders an empty body.
-        return `
-        <ha-card>
-          <div class="${REGIONS.CARD_WRAPPER}">
-            ${buildHeader(vm)}
-            <div class="${REGIONS.CONTENT}">
-              <p>Coming soon.</p>
-            </div>
-            ${buildFooter(vm)}
-          </div>
-        </ha-card>
-      `;
+        // Reserved for a future settings view. For now, treat it
+        // identically to the detail view.
+        return (
+          '<ha-card>' +
+            '<div class="' + REGIONS.CARD_WRAPPER + '">' +
+              buildHeader(vm) +
+              buildEmptyContent() +
+              buildFooter(vm) +
+            '</div>' +
+          '</ha-card>'
+        );
       case LAYOUTS.MAIN:
       default:
-        return `
-        <ha-card>
-          <div class="${REGIONS.CARD_WRAPPER}">
-            ${buildHeader(vm)}
-            ${buildContent(vm)}
-            ${buildFooter(vm)}
-          </div>
-        </ha-card>
-      `;
+        return (
+          '<ha-card>' +
+            '<div class="' + REGIONS.CARD_WRAPPER + '">' +
+              buildHeader(vm) +
+              buildContent(vm) +
+              buildFooter(vm) +
+            '</div>' +
+          '</ha-card>'
+        );
     }
   };
 
@@ -740,11 +872,24 @@
   }
 
   .card-header {
+    display: block;
+    padding: 16px 16px 8px 16px;
+    border-bottom: 1px solid var(--divider-color, transparent);
+  }
+
+  .card-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .card-header__text {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 16px 16px 8px 16px;
-    border-bottom: 1px solid var(--divider-color, transparent);
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .card-title {
@@ -777,6 +922,41 @@
     color: var(--secondary-text-color);
     text-align: right;
     border-top: 1px solid var(--divider-color, transparent);
+  }
+`;
+
+  // Header nav arrow button — used to switch between internal views.
+  const navStyles = `
+  .card-nav-arrow {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+
+  .card-nav-arrow:hover,
+  .card-nav-arrow:focus-visible {
+    background: var(--divider-color, rgba(127, 127, 127, 0.12));
+    color: var(--primary-text-color);
+    outline: none;
+  }
+
+  .card-nav-arrow:active {
+    background: var(--divider-color, rgba(127, 127, 127, 0.2));
+  }
+
+  .card-nav-arrow__icon {
+    --mdc-icon-size: 24px;
   }
 `;
 
@@ -845,6 +1025,7 @@
   const allStyles = [
     baseStyles,
     cardStyles,
+    navStyles,
     statusStyles,
   ].join('\n');
 
@@ -1001,21 +1182,46 @@
       // Mount container for re-rendered content.
       //
       // IMPORTANT: this card is a content display, not a button. By
-      // default we attach NO interaction listeners at all — that way
+      // default we attach NO tap-action listeners at all — that way
       // Home Assistant doesn't intercept clicks with its own
       // "more-info" dialog or treat the card as a tap target.
       //
-      // Interaction listeners are wired up *only* when the user has
-      // explicitly configured a `tap_action` / `hold_action` /
-      // `double_tap_action` in their YAML. The controller's handlers
-      // are no-ops if the corresponding action isn't set.
+      // Two kinds of listeners may be attached:
+      //   1. Internal header-nav arrow clicks (always wired up).
+      //      These route through `router.navigate()` and never
+      //      dispatch hass-action events.
+      //   2. Optional tap_action / hold_action / double_tap_action
+      //      listeners (only attached when the user has configured
+      //      them in YAML). The controller's handlers are no-ops
+      //      if the corresponding action isn't set.
       if (!root.querySelector('[data-card-host]')) {
         const host = document.createElement('div');
         host.setAttribute('data-card-host', '');
 
+        // (1) Internal header-nav arrow click delegation.
+        //     Triggered by factory.js's <button data-card-nav="...">
+        //     elements in the header.
+        host.addEventListener('click', (ev) => {
+          const target = ev.target;
+          if (!(target instanceof Element)) return;
+          const btn = target.closest('[data-card-nav]');
+          if (!btn || !host.contains(btn)) return;
+          const view = btn.getAttribute('data-card-nav');
+          if (view) router.navigate(view);
+        });
+
+        // (2) Optional user-configured tap actions.
         const cfg = this._controller.config || {};
         if (cfg.tap_action) {
+          // Tap action is added at the host level so the user can tap
+          // anywhere on the card. We skip the nav arrow buttons so a
+          // tap on the arrow navigates internally, not to the
+          // tap_action.
           host.addEventListener('click', (ev) => {
+            const target = ev.target;
+            if (target instanceof Element && target.closest('[data-card-nav]')) {
+              return; // nav arrow click — handled above
+            }
             this._controller.handleClick(this, ev);
           });
         }

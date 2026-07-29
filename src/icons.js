@@ -21,6 +21,10 @@ export const ICON_NAMES = Object.freeze({
   HOME: 'mdi:home',
   SETTINGS: 'mdi:cog',
   REFRESH: 'mdi:refresh',
+  // Internal-card navigation arrows (used by the header nav
+  // buttons the factory renders to switch between views).
+  ARROW_RIGHT: 'mdi:chevron-right',
+  ARROW_LEFT: 'mdi:chevron-left',
 });
 
 // Inline SVG path data — only used if you need a fully offline
@@ -59,11 +63,18 @@ export const getIconPath = (key) => SVG_PATHS[key];
  * @param {string} key
  * @param {object} [opts]
  * @param {string} [opts.className]
+ * @param {Record<string,string>} [opts.attrs] extra HTML attrs
+ *        (e.g. `{ 'data-card-nav': 'main' }`).
  * @returns {string}
  */
 export const renderIcon = (key, opts = {}) => {
   const name = getIcon(key);
   if (!name) return '';
   const cls = opts.className ? ` class="${opts.className}"` : '';
-  return `<ha-icon icon="${name}"${cls}></ha-icon>`;
+  const attrs = opts.attrs
+    ? ' ' + Object.entries(opts.attrs)
+        .map(([k, v]) => `${k}="${String(v).replace(/"/g, '"')}"`)
+        .join(' ')
+    : '';
+  return `<ha-icon icon="${name}"${cls}${attrs}></ha-icon>`;
 };
