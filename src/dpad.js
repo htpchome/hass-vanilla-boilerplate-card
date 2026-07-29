@@ -61,34 +61,57 @@ const EVT_TOGGLE = 'dpad-toggle';
 // Styles \u2014 self-contained, uses only HA design tokens for theming
 // ----------------------------------------------------------------
 
+// Visual design matches the reference image:
+//   - A large dark circular plate (radial gradient) with a red
+//     dotted border.
+//   - Four arrow icons at the cardinal points (transparent
+//     backgrounds; just the icon shows on the plate).
+//   - Four diagonal "spoke" lines connecting the center disc to
+//     each arrow icon (rendered as a single CSS background using
+//     repeating-linear-gradient on the .dpad container).
+//   - A darker raised disc in the center holding the mic button.
+//
+// The colors are intentionally dark (not theme-aware) to match
+// the reference. If you want the D-pad to follow the active HA
+// theme, swap the gradient stops and the icon color to use
+// HA design tokens (--primary-text-color, --secondary-background-color, etc.).
 const DPAD_STYLES = `
   :host {
     display: block;
     --dpad-size: 220px;
-    --dpad-btn-size: 64px;
-    --dpad-mic-size: 72px;
+    --dpad-arrow-icon-size: 28px;
+    --dpad-mic-icon-size: 36px;
   }
 
   .${DPAD_CLASS} {
     position: relative;
     display: grid;
-    /* Three equal columns. Each button is a direct grid child
-       and uses its own grid-area row/col to position itself. */
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    /* No row gap — we want the up/down buttons to be exactly
-       above/below the center, with no visual spacing between
-       them and the horizontal arrows / mic. */
-    column-gap: 4px;
+    column-gap: 0;
     row-gap: 0;
     width: var(--dpad-size);
     height: var(--dpad-size);
     max-width: 100%;
     aspect-ratio: 1 / 1;
-    /* Allow children to overflow the cell slightly so the larger
-       mic button can render larger than the column width without
-       pushing its row out of shape. */
-    overflow: visible;
+    border-radius: 50%;
+    /* The "circle plate" body color. */
+    background:
+      /* Four diagonal "spoke" lines from the center to each
+         cardinal direction. Drawn as a single repeating-linear-
+         gradient that crosses the circle. */
+      repeating-linear-gradient(
+        45deg,
+        rgba(220, 30, 30, 0.55) 0px,
+        rgba(220, 30, 30, 0.55) 1px,
+        transparent 1px,
+        transparent 12px
+      ),
+      /* Plate gradient. */
+      radial-gradient(circle at top left, #202020 15%, #303030 100%);
+    border: 1px solid #444;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
   }
 
   .${DPAD_BTN_CLASS} {
@@ -98,34 +121,30 @@ const DPAD_STYLES = `
     justify-content: center;
     width: 100%;
     height: 100%;
-    max-width: var(--dpad-btn-size);
-    max-height: var(--dpad-btn-size);
-    aspect-ratio: 1 / 1;
     padding: 0;
     margin: 0;
-    background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
-    color: var(--primary-text-color);
-    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
-    border-radius: 50%;
+    background: transparent;
+    color: rgba(128, 128, 128, 0.5); /* muted icon color */
+    border: none;
+    border-radius: 0;
     cursor: pointer;
-    transition: background-color 80ms ease, color 80ms ease,
-                border-color 80ms ease, transform 80ms ease;
+    transition: color 80ms ease, transform 80ms ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
   .${DPAD_BTN_CLASS}:hover {
-    background: var(--secondary-background-color, rgba(127, 127, 127, 0.16));
+    color: rgba(180, 180, 180, 0.9);
   }
 
   .${DPAD_BTN_CLASS}:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: -4px;
   }
 
   .${DPAD_BTN_CLASS} ha-icon {
-    --mdc-icon-size: 28px;
+    --mdc-icon-size: var(--dpad-arrow-icon-size);
     pointer-events: none;
   }
 
@@ -135,23 +154,35 @@ const DPAD_STYLES = `
   .${DPAD_BTN_RIGHT} { grid-area: 2 / 3; }
   .${DPAD_BTN_MIC}   {
     grid-area: 2 / 2;
-    max-width: var(--dpad-mic-size);
-    max-height: var(--dpad-mic-size);
+    width: 64px;
+    height: 64px;
+    align-self: center;
+    justify-self: center;
+    margin: auto;
+    /* The raised dark disc around the mic. */
+    background: radial-gradient(circle at top left, #303030 15%, #101010 100%);
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    color: rgba(128, 128, 128, 0.8);
   }
 
-  /* Momentary pressed state for arrow buttons. */
+  .${DPAD_BTN_MIC} ha-icon {
+    --mdc-icon-size: var(--dpad-mic-icon-size);
+  }
+
+  /* Momentary pressed state for arrow buttons — just brighten
+     the icon, no background change (the plate is the background). */
   .${DPAD_BTN_CLASS}.is-pressed {
-    background: var(--primary-color);
-    color: var(--card-background-color, #fff);
-    border-color: var(--primary-color);
-    transform: scale(0.95);
+    color: #fff;
+    transform: scale(0.92);
   }
 
-  /* Mic toggle: when active, green background. */
+  /* Mic toggle: when active, show a subtle green ring around
+     the central disc. (Background stays dark per the reference.) */
   .${DPAD_BTN_MIC}.is-active {
-    background: var(--ha-color-green, #4caf50);
-    color: #fff;
-    border-color: var(--ha-color-green, #4caf50);
+    box-shadow:
+      inset 0 0 0 2px var(--ha-color-green, #4caf50),
+      inset 0 0 12px rgba(76, 175, 80, 0.4);
   }
 
   /* Mic icon swap: hide default when active, show "off" icon. */
