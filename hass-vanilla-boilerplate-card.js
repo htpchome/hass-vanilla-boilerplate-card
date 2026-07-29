@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.15';
+  const CARD_VERSION = '0.1.16';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -711,8 +711,6 @@
   // ----------------------------------------------------------------
 
   // Visual design matches the reference image:
-  //   - A large dark circular plate (radial gradient) with a red
-  //     dotted border.
   //   - Four arrow icons at the cardinal points (transparent
   //     backgrounds; just the icon shows on the plate).
   //   - Four diagonal "spoke" lines connecting the center disc to
@@ -752,10 +750,10 @@
     /* Plate gradient (no decorative overlay). */
     /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
     background-image: 
-      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+      radial-gradient(circle 97% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
       radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
-    border: 1px solid #444;
-    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--dpad-bg-1);
+    box-shadow: inset 0 0 12px var(--dpad-bg-1);
     overflow: hidden;
   }
 
@@ -815,7 +813,8 @@
     margin: auto;
     /* The raised dark disc around the mic. */
     background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
-    border: 1px solid rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--dpad-bg-1);
+    box-shadow: inset 0 0 12px var(--dpad-bg-1);
     border-radius: 50%;
     color: var(--dpad-text-2);
   }
