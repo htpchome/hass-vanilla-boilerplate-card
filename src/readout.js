@@ -1,36 +1,30 @@
 /**
  * readout.js
  * ---------------------------------------------------------------
- * Reusable textual-readout custom element: <dpad-readout>
+ * Reusable scrolling event-log custom element: <dpad-readout>
  *
  * Drop this element into any HTML (or shadow root) and it will
- * render a single line of text inside a small, theme-aware pill:
+ * render a vertically-scrolling list of action lines with a
+ * "clear" button in the corner:
  *
- *   ┌─────────────────────────────────────────┐
- *   │  Ready                                  │
- *   └─────────────────────────────────────────┘
+ *   \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+ *   \u2502  [left]                    [Clear]  \u2502
+ *   \u2502  [up]                              \u2502
+ *   \u2502  [right]                           \u2502
+ *   \u2502  [left]                             \u2502
+ *   \u2502                                     \u2502
+ *   \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
  *
- * The readout is a passive display \u2014 it never modifies the
- * thing it describes. Consumers update it through one of:
+ * Behavior (when subscribed to a <dpad-control>):
  *
- *   - The `setText(text)` method (synchronous):
- *
- *         const el = document.querySelector('dpad-readout');
- *         el.setText('Up pressed');
- *
- *   - The `subscribe(dpadElement)` convenience method that
- *     wires a <dpad-control>'s `dpad-press` / `dpad-release` /
- *     `dpad-toggle` events to a friendly text description
- *     automatically:
- *
- *         const dpad  = document.querySelector('dpad-control');
- *         const read  = document.querySelector('dpad-readout');
- *         const off   = read.subscribe(dpad);
- *         // later: off() to disconnect
- *
- *   - Listening to the `readout-text` CustomEvent that fires
- *     on the host every time the text changes (composed:true,
- *     bubbles, so it crosses shadow boundaries).
+ *   - Direction buttons (up/down/left/right):
+ *       \u2022 On dpad-press:   append a new line "[<action>]"
+ *       \u2022 While held:      keep appending "[<action>]"
+ *                              lines on a short interval until
+ *                              the user releases
+ *       \u2022 On dpad-release: stop appending
+ *   - Microphone button: IGNORED (per user spec).
+ *   - Clear button:        empties the log.
  *
  * The element is fully self-contained:
  *   - Shadow DOM for style isolation
@@ -42,36 +36,31 @@
  */
 
 // ----------------------------------------------------------------
-// Class hooks & custom event name
+// Class hooks & custom event names
 // ----------------------------------------------------------------
 
 const READOUT_CLASS = 'dpad-readout';
-const READOUT_TEXT_CLASS = 'dpad-readout__text';
-const READOUT_ICON_CLASS = 'dpad-readout__icon';
+const READOUT_LOG_CLASS = 'dpad-readout__log';
+const READOUT_LINE_CLASS = 'dpad-readout__line';
+const READOUT_CLEAR_CLASS = 'dpad-readout__clear';
+const READOUT_EMPTY_CLASS = 'dpad-readout__empty';
 
-const EVT_TEXT = 'readout-text';
+const EVT_LOG = 'readout-log';
 
-// Default text shown before the consumer ever calls setText.
-const DEFAULT_TEXT = 'Ready';
+// Direction actions the readout cares about. The microphone is
+// intentionally excluded per the user spec.
+const TRACKED_ACTIONS = Object.freeze(new Set(['up', 'down', 'left', 'right']));
 
-// Friendly text labels for each dpad action. Consumers can
-// override these by passing a custom `labels` object to
-// subscribe().
-const DEFAULT_LABELS = Object.freeze({
-  press: Object.freeze({
-    up: 'Up pressed',
-    down: 'Down pressed',
-    left: 'Left pressed',
-    right: 'Right pressed',
-  }),
-  release: Object.freeze({
-    up: 'Up released',
-    down: 'Down released',
-    left: 'Left released',
-    right: 'Right released',
-  }),
-  toggle: (active) => (active ? 'Microphone ON' : 'Microphone OFF'),
-});
+// Repeater interval (ms) for "keep printing while held".
+const REPEAT_INTERVAL_MS = 150;
+
+// Maximum number of log lines kept in memory. Older lines are
+// dropped to keep the DOM small and scrolling smooth.
+const MAX_LOG_LINES = 500;
+
+// Default labels per action. The default appends "[<action>]"
+// which the user explicitly asked for. Override via subscribe().
+const DEFAULT_FORMAT = (action) => '[' + action + ']';
 
 // ----------------------------------------------------------------
 // Styles \u2014 self-contained, uses only HA design tokens for theming
@@ -84,39 +73,96 @@ const READOUT_STYLES = `
 
   .${READOUT_CLASS} {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 36px;
-    padding: 8px 14px;
+    flex-direction: column;
     border-radius: var(--ha-card-border-radius, 12px);
     background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
     color: var(--primary-text-color);
     border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
     font-family: var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);
-    font-size: 0.95rem;
-    line-height: 1.3;
-    text-align: center;
-    transition: background-color 120ms ease, color 120ms ease,
-                border-color 120ms ease;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    overflow: hidden;
   }
 
-  .${READOUT_CLASS}--active {
-    /* Slight emphasis when the readout is showing a non-default message. */
-    color: var(--primary-color, #03a9f4);
-    border-color: var(--primary-color, #03a9f4);
+  .${READOUT_CLASS}__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--divider-color, rgba(127, 127, 127, 0.18));
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.04));
   }
 
-  .${READOUT_ICON_CLASS} {
-    --mdc-icon-size: 18px;
+  .${READOUT_CLASS}__title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--secondary-text-color);
+    margin: 0;
+  }
+
+  .${READOUT_CLEAR_CLASS} {
     flex: 0 0 auto;
-    opacity: 0.7;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    margin: 0;
+    background: transparent;
+    color: var(--secondary-text-color);
+    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
+    border-radius: var(--ha-card-border-radius, 8px);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
   }
 
-  .${READOUT_TEXT_CLASS} {
+  .${READOUT_CLEAR_CLASS}:hover,
+  .${READOUT_CLEAR_CLASS}:focus-visible {
+    color: var(--primary-text-color);
+    background: var(--divider-color, rgba(127, 127, 127, 0.12));
+    border-color: var(--divider-color, rgba(127, 127, 127, 0.35));
+    outline: none;
+  }
+
+  .${READOUT_CLEAR_CLASS} ha-icon {
+    --mdc-icon-size: 14px;
+  }
+
+  .${READOUT_LOG_CLASS} {
     flex: 1 1 auto;
-    min-width: 0;
-    word-break: break-word;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 10px;
+    margin: 0;
+    /* Give the scrollable region a sensible default height even
+       if the host has no explicit height. */
+    min-height: 96px;
+    max-height: 200px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .${READOUT_LINE_CLASS} {
+    display: block;
+    padding: 1px 0;
+    color: var(--primary-text-color);
+    word-break: break-all;
+  }
+
+  .${READOUT_LINE_CLASS}--pressed {
+    color: var(--primary-color, #03a9f4);
+    font-weight: 600;
+  }
+
+  .${READOUT_EMPTY_CLASS} {
+    color: var(--secondary-text-color);
+    font-style: italic;
+    font-family: var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);
   }
 `;
 
@@ -125,22 +171,28 @@ const READOUT_STYLES = `
 // ----------------------------------------------------------------
 
 /**
- * <dpad-readout> \u2014 a self-contained textual readout pill.
+ * <dpad-readout> \u2014 a self-contained scrolling event-log pill.
  *
  * Public API:
- *   - setText(text)         update the displayed text
- *   - getText()             read the current text
- *   - clear()               reset to the default "Ready" text
- *   - subscribe(dpadEl, [labels])  auto-update from a <dpad-control>
- *   - addEventListener('readout-text', fn)  fires on every change
+ *   - append(text)            add a line to the log
+ *   - clear()                 empty the log
+ *   - getLog()                return a copy of the current log
+ *   - subscribe(dpadEl, [opts])  auto-update from a <dpad-control>
+ *   - addEventListener('readout-log', fn)  fires on every append
+ *
+ * The microphone button is intentionally ignored by the default
+ * subscribe() implementation, per the user spec.
  */
 class DpadReadout extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._text = DEFAULT_TEXT;
-    this._isActive = false;     // becomes true once the user pushes any non-default text
-    this._unsubscribers = [];   // cleanup list returned by subscribe()
+    /** @type {string[]} newest line last */
+    this._log = [];
+    /** @type {Map<string, number>} action -> interval id */
+    this._repeaters = new Map();
+    this._unsubscribers = [];
+    this._format = DEFAULT_FORMAT;
   }
 
   // ---- lifecycle ----
@@ -151,100 +203,134 @@ class DpadReadout extends HTMLElement {
   }
 
   disconnectedCallback() {
-    // Clean up any active event subscriptions so we don't leak.
+    // Clean up any active event subscriptions and repeat timers.
     this._unsubscribers.forEach((off) => {
       try { off(); } catch (_e) { /* ignore */ }
     });
     this._unsubscribers = [];
+    this._stopAllRepeaters();
   }
 
   // ---- public API ----
 
   /**
-   * Update the displayed text. Fires a `readout-text` event with
-   * detail `{ text }` so consumers can mirror the change elsewhere.
+   * Append a line to the log. Trims old lines past MAX_LOG_LINES.
+   * Fires `readout-log` with `{ lines }` (full log copy) so
+   * consumers can mirror the state elsewhere.
    *
    * @param {string} text
    */
-  setText(text) {
-    const next = text == null ? '' : String(text);
-    if (next === this._text) return;
-    this._text = next;
-    this._isActive = next.length > 0 && next !== DEFAULT_TEXT;
+  append(text) {
+    const line = text == null ? '' : String(text);
+    if (!line) return;
+    this._log.push(line);
+    if (this._log.length > MAX_LOG_LINES) {
+      // Drop from the front so newest is always at the bottom.
+      this._log.splice(0, this._log.length - MAX_LOG_LINES);
+    }
     this._render();
-    this._dispatch(EVT_TEXT, { text: this._text });
+    this._dispatch(EVT_LOG, { lines: this.getLog() });
   }
 
   /**
-   * Read the current text. Returns the default text if no
-   * setText() call has been made yet.
-   *
-   * @returns {string}
-   */
-  getText() {
-    return this._text;
-  }
-
-  /**
-   * Reset the readout to its default "Ready" text.
+   * Empty the log.
    */
   clear() {
-    this.setText(DEFAULT_TEXT);
+    if (this._log.length === 0) return;
+    this._log = [];
+    this._stopAllRepeaters();
+    this._render();
+    this._dispatch(EVT_LOG, { lines: this.getLog() });
+  }
+
+  /**
+   * Return a copy of the current log lines (newest last).
+   *
+   * @returns {string[]}
+   */
+  getLog() {
+    return this._log.slice();
   }
 
   /**
    * Convenience: subscribe to a <dpad-control>'s events and
-   * automatically update the readout text.
+   * append direction-button events to the log automatically.
    *
-   * @param {HTMLElement} dpadEl  a <dpad-control> element
-   * @param {object} [labels]      optional override of the default
-   *                               press/release/toggle labels
-   * @returns {() => void}         an unsubscribe function
+   *   - On dpad-press {action}:  append "[action]" + start a
+   *     short-interval repeater so the log keeps growing while
+   *     the user holds the button.
+   *   - On dpad-release:          stop the repeater for that action.
+   *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
+   *
+   * @param {HTMLElement} dpadEl   a <dpad-control> element
+   * @param {object} [opts]
+   * @param {(action: string) => string} [opts.format]
+   *        override the default line formatter. Receives the
+   *        action ("up"/"down"/"left"/"right") and returns the
+   *        line to append. Default: `(a) => "[" + a + "]"`.
+   * @returns {() => void}         unsubscribe function
    */
-  subscribe(dpadEl, labels = {}) {
+  subscribe(dpadEl, opts = {}) {
     if (!dpadEl || typeof dpadEl.addEventListener !== 'function') {
       // eslint-disable-next-line no-console
       console.warn('[dpad-readout] subscribe() needs a valid element');
       return () => {};
     }
 
-    const L = {
-      press: { ...DEFAULT_LABELS.press, ...(labels.press || {}) },
-      release: { ...DEFAULT_LABELS.release, ...(labels.release || {}) },
-      toggle: labels.toggle || DEFAULT_LABELS.toggle,
-    };
+    if (typeof opts.format === 'function') this._format = opts.format;
 
     const onPress = (ev) => {
       const action = ev.detail && ev.detail.action;
-      if (!action) return;
-      this.setText(L.press[action] || `${action} pressed`);
+      if (!action || !TRACKED_ACTIONS.has(action)) return;
+      // Add the first line and start a repeater for as long as
+      // the user holds the button.
+      this.append(this._format(action));
+      this._startRepeater(action);
     };
     const onRelease = (ev) => {
       const action = ev.detail && ev.detail.action;
       if (!action) return;
-      this.setText(L.release[action] || `${action} released`);
-    };
-    const onToggle = (ev) => {
-      const active = !!(ev.detail && ev.detail.active);
-      const text =
-        typeof L.toggle === 'function' ? L.toggle(active) : L.toggle;
-      this.setText(text);
+      this._stopRepeater(action);
     };
 
     dpadEl.addEventListener('dpad-press', onPress);
     dpadEl.addEventListener('dpad-release', onRelease);
-    dpadEl.addEventListener('dpad-toggle', onToggle);
 
     const off = () => {
       dpadEl.removeEventListener('dpad-press', onPress);
       dpadEl.removeEventListener('dpad-release', onRelease);
-      dpadEl.removeEventListener('dpad-toggle', onToggle);
+      this._stopAllRepeaters();
     };
     this._unsubscribers.push(off);
     return off;
   }
 
   // ---- internals ----
+
+  _startRepeater(action) {
+    // Don't double-start.
+    if (this._repeaters.has(action)) return;
+    const id = setInterval(() => {
+      // If the action was somehow released between intervals,
+      // stop cleanly.
+      if (!this._repeaters.has(action)) return;
+      this.append(this._format(action));
+    }, REPEAT_INTERVAL_MS);
+    this._repeaters.set(action, id);
+  }
+
+  _stopRepeater(action) {
+    const id = this._repeaters.get(action);
+    if (id !== undefined) {
+      clearInterval(id);
+      this._repeaters.delete(action);
+    }
+  }
+
+  _stopAllRepeaters() {
+    this._repeaters.forEach((id) => clearInterval(id));
+    this._repeaters.clear();
+  }
 
   _mount() {
     const style = document.createElement('style');
@@ -253,20 +339,50 @@ class DpadReadout extends HTMLElement {
     const host = document.createElement('div');
     host.className = READOUT_CLASS;
     host.innerHTML =
-      '<span class="' + READOUT_ICON_CLASS + '">' +
-        '<ha-icon icon="mdi:gesture-tap"></ha-icon>' +
-      '</span>' +
-      '<span class="' + READOUT_TEXT_CLASS + '"></span>';
+      '<div class="' + READOUT_CLASS + '__header">' +
+        '<span class="' + READOUT_CLASS + '__title">Activity</span>' +
+        '<button type="button" class="' + READOUT_CLEAR_CLASS + '" aria-label="Clear log">' +
+          '<ha-icon icon="mdi:delete-sweep"></ha-icon>' +
+          '<span>Clear</span>' +
+        '</button>' +
+      '</div>' +
+      '<div class="' + READOUT_LOG_CLASS + '" role="log" aria-live="polite"></div>';
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(host);
+
+    // Wire the clear button. The button is inside the shadow root,
+    // so we bind the listener to the host element (composed
+    // events bubble across the shadow boundary).
+    const clearBtn = this.shadowRoot.querySelector('.' + READOUT_CLEAR_CLASS);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => this.clear());
+    }
   }
 
   _render() {
-    const textEl = this.shadowRoot && this.shadowRoot.querySelector('.' + READOUT_TEXT_CLASS);
-    if (textEl) textEl.textContent = this._text;
-    const root = this.shadowRoot && this.shadowRoot.querySelector('.' + READOUT_CLASS);
-    if (root) root.classList.toggle(READOUT_CLASS + '--active', this._isActive);
+    const logEl = this.shadowRoot && this.shadowRoot.querySelector('.' + READOUT_LOG_CLASS);
+    if (!logEl) return;
+
+    if (this._log.length === 0) {
+      logEl.innerHTML =
+        '<div class="' + READOUT_EMPTY_CLASS + '">No activity yet \u2014 push a direction button.</div>';
+      return;
+    }
+
+    // Re-render as a string. Newest at the bottom. Each line is
+    // textContent-safe (no innerHTML) so user-influenced strings
+    // (if any) can never inject markup.
+    const lines = this._log.map(
+      (line) => '<div class="' + READOUT_LINE_CLASS + '">' + escapeHtml(line) + '</div>',
+    );
+    logEl.innerHTML = lines.join('');
+
+    // Auto-scroll to the bottom so the newest line is always
+    // visible. (No-op if the user has scrolled up to read older
+    // lines, which is fine — they'll see the new line appear at
+    // the bottom of the visible area.)
+    logEl.scrollTop = logEl.scrollHeight;
   }
 
   /**
@@ -287,10 +403,22 @@ class DpadReadout extends HTMLElement {
   }
 }
 
+// Lightweight HTML-escape used when rendering log lines. We
+// import lazily to keep this module dependency-free.
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, String.fromCharCode(38, 97, 109, 112, 59))
+    .replace(/</g, String.fromCharCode(38, 108, 116, 59))
+    .replace(/>/g, String.fromCharCode(38, 103, 116, 59))
+    .replace(/"/g, String.fromCharCode(38, 113, 117, 111, 116, 59))
+    .replace(/'/g, String.fromCharCode(38, 35, 51, 57, 59));
+}
+
 // Register the custom element. Guard against double-registration
 // (e.g. if this module is imported more than once).
 if (typeof customElements !== 'undefined' && !customElements.get('dpad-readout')) {
   customElements.define('dpad-readout', DpadReadout);
 }
 
-export { DpadReadout, DEFAULT_LABELS, EVT_TEXT };
+export { DpadReadout, EVT_LOG, TRACKED_ACTIONS, REPEAT_INTERVAL_MS, MAX_LOG_LINES };
