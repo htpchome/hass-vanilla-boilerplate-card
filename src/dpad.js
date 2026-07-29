@@ -98,7 +98,10 @@ const DPAD_STYLES = `
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     /* Plate gradient (no decorative overlay). */
-    background: radial-gradient(circle at top left, #202020 15%, #303030 100%);
+    /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
+    background-image: 
+      radial-gradient(circle 95% at top left, #202020 15%, #303030 100% 100%),
+      radial-gradient(circle 100% at top left, #fcfcfc 15%, #999999 100%);
     border: 1px solid #444;
     box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
