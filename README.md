@@ -94,9 +94,8 @@ content: |
 
 ## Tap Action
 
-By default the card is a content display and does **not** dispatch any
-action events when clicked. To enable a click action, set `tap_action`
-exactly like any built-in card:
+The card dispatches the standard `hass-action` event on click, so you
+can attach a `tap_action` exactly like any built-in card:
 
 ```yaml
 type: hass-vanilla-boilerplate-card
@@ -106,9 +105,6 @@ tap_action:
   action: navigate
   navigation_path: /lovelace/weather
 ```
-
-You can also set `hold_action` and `double_tap_action` for richer
-interactions.
 
 ## Development
 
@@ -138,56 +134,6 @@ Every visual token in `src/styles.js` references HA design variables
 like `--primary-text-color`, `--ha-card-background`, and
 `--ha-card-border-radius`. You do **not** need to define any custom
 colors — your card automatically adopts the active theme.
-
-## Releasing (HACS)
-
-This project ships a release script that produces a clean zip
-containing only the files HACS needs to install:
-
-  - `hass-vanilla-boilerplate-card.js` — the bundle
-  - `hacs.json` — HACS metadata
-
-Dev-only files (`rollup.config.js`, `src/`, `package.json`,
-`node_modules/`, `.github/`, `*.map`, etc.) are excluded so the
-end user's `config/www/community/hass-vanilla-boilerplate-card/`
-directory stays clean and small.
-
-### One-shot build
-
-```bash
-npm run build                       # produces hass-vanilla-boilerplate-card.js
-node scripts/make-release-zip.js     # -> dist/hass-vanilla-boilerplate-card.zip
-```
-
-### Combined build + zip
-
-```bash
-npm run release
-# -> dist/hass-vanilla-boilerplate-card.zip
-```
-
-### GitHub Actions
-
-The workflow at `.github/workflows/release.yml` runs automatically
-whenever you push a tag matching `v*` (e.g. `v0.1.0`):
-
-1. Installs dependencies
-2. Runs `npm run build` to produce the bundle
-3. Runs `node scripts/make-release-zip.js` to produce the clean zip
-4. Creates a GitHub release and attaches the zip
-
-HACS prefers release-asset zips over default-branch downloads
-whenever a release with an asset exists, so this is what makes
-the user-facing installation clean.
-
-### Cutting a release
-
-```bash
-# Bump the version in package.json, then:
-git tag v0.1.0
-git push origin v0.1.0
-# -> GitHub Actions runs the workflow and attaches the zip
-```
 
 ## License
 

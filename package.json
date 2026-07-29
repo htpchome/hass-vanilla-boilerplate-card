@@ -7,7 +7,8 @@
   "files": [
     "hass-vanilla-boilerplate-card.js",
     "hacs.json",
-    "README.md"
+    "README.md",
+    "src/"
   ],
   "scripts": {
     "build": "rollup -c",
@@ -15,8 +16,7 @@
     "lint": "eslint src",
     "format": "prettier --write src",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "release": "npm run build && node scripts/make-release-zip.js"
+    "test:watch": "vitest"
   },
   "keywords": [
     "home-assistant",
