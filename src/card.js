@@ -255,11 +255,44 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     try {
       const vm = this._controller.getViewModel();
       host.innerHTML = buildCardHtml(vm);
+      // After every render, wire up the (optional) dpad → readout
+      // subscription so dpad button presses show up in the log.
+      this._wireDpadReadout(host);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(`[${CARD_TYPE}] render failed`, err);
       host.innerHTML = renderErrorMessage(`Render error: ${String(err.message || err)}`);
     }
+  }
+
+  /**
+   * If both <dpad-control> and <dpad-readout> exist in the rendered
+   * host, subscribe the readout to the dpad. Idempotent: stores
+   * the unsubscriber on the element and reuses it across renders
+   * (or replaces it if the elements changed).
+   *
+   * @param {HTMLElement} host
+   * @private
+   */
+  _wireDpadReadout(host) {
+    if (!host) return;
+    const dpad = host.querySelector('dpad-control');
+    const readout = host.querySelector('dpad-readout');
+    if (!dpad || !readout) return;
+
+    // If we already wired these exact instances, nothing to do.
+    if (this._dpadReadoutWired && this._dpadReadoutWired.dpad === dpad &&
+        this._dpadReadoutWired.readout === readout) {
+      return;
+    }
+
+    // Otherwise (re-)subscribe. Disconnect any previous subscription first.
+    if (this._dpadReadoutWired && typeof this._dpadReadoutWired.off === 'function') {
+      try { this._dpadReadoutWired.off(); } catch (_e) { /* ignore */ }
+    }
+
+    const off = readout.subscribe(dpad);
+    this._dpadReadoutWired = { dpad, readout, off };
   }
 }
 
