@@ -12,9 +12,10 @@
  *
  *   - 4 arrow buttons are momentary. While held they show
  *     --primary-color. On release they fire `dpad-release`.
- *   - The center microphone button is a toggle. When active it
- *     shows green (--ha-color-green) and the icon swaps from
- *     mdi:microphone to mdi:microphone-off. Each toggle fires
+ *   - The center microphone button is a toggle. By default it
+ *     shows mdi:microphone-off (the mic is muted); when active
+ *     it shows mdi:microphone (recording in progress) and the
+ *     central disc gets a green ring. Each toggle fires
  *     `dpad-toggle` with detail `{ active: boolean }`.
  *
  * The element is fully self-contained:
@@ -79,8 +80,9 @@ const DPAD_STYLES = `
   :host {
     display: block;
     --dpad-size: 220px;
-    --dpad-arrow-icon-size: 28px;
-    --dpad-mic-icon-size: 36px;
+    --dpad-arrow-icon-size: 42px;   /* 150% larger than original 28px */
+    --dpad-mic-size: 96px;          /* 150% larger than original 64px */
+    --dpad-mic-icon-size: 54px;     /* 150% larger than original 36px */
   }
 
   .${DPAD_CLASS} {
@@ -95,20 +97,8 @@ const DPAD_STYLES = `
     max-width: 100%;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
-    /* The "circle plate" body color. */
-    background:
-      /* Four diagonal "spoke" lines from the center to each
-         cardinal direction. Drawn as a single repeating-linear-
-         gradient that crosses the circle. */
-      repeating-linear-gradient(
-        45deg,
-        rgba(220, 30, 30, 0.55) 0px,
-        rgba(220, 30, 30, 0.55) 1px,
-        transparent 1px,
-        transparent 12px
-      ),
-      /* Plate gradient. */
-      radial-gradient(circle at top left, #202020 15%, #303030 100%);
+    /* Plate gradient (no decorative overlay). */
+    background: radial-gradient(circle at top left, #202020 15%, #303030 100%);
     border: 1px solid #444;
     box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -154,8 +144,8 @@ const DPAD_STYLES = `
   .${DPAD_BTN_RIGHT} { grid-area: 2 / 3; }
   .${DPAD_BTN_MIC}   {
     grid-area: 2 / 2;
-    width: 64px;
-    height: 64px;
+    width: var(--dpad-mic-size);
+    height: var(--dpad-mic-size);
     align-self: center;
     justify-self: center;
     margin: auto;
@@ -234,12 +224,16 @@ const buildDpadHtml = () => {
   const down = buildButtonHtml(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
   const left = buildButtonHtml(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
   const right = buildButtonHtml(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+  // Mic button icon swap:
+  //   - default (off): show mdi:microphone-off
+  //   - active  (on):  show mdi:microphone (recording in progress)
+  // The first iconKey is the default; the second is the active.
   const mic = buildButtonHtml(
     DPAD_ACTIONS.MIC,
     DPAD_BTN_MIC,
-    'MICROPHONE',
-    'Toggle microphone',
     'MICROPHONE_OFF',
+    'Toggle microphone',
+    'MICROPHONE',
   );
   // Each button is a direct grid child. The grid is 3x3 and each
   // button uses its own `grid-area` to position itself:
