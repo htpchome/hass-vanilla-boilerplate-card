@@ -72,21 +72,23 @@ const DPAD_STYLES = `
   .${DPAD_CLASS} {
     position: relative;
     display: grid;
+    /* Three equal columns. Each button is a direct grid child
+       and uses its own grid-area row/col to position itself. */
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 4px;
+    /* No row gap — we want the up/down buttons to be exactly
+       above/below the center, with no visual spacing between
+       them and the horizontal arrows / mic. */
+    column-gap: 4px;
+    row-gap: 0;
     width: var(--dpad-size);
     height: var(--dpad-size);
     max-width: 100%;
     aspect-ratio: 1 / 1;
-  }
-
-  .${DPAD_CLASS}__slot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    min-height: 0;
+    /* Allow children to overflow the cell slightly so the larger
+       mic button can render larger than the column width without
+       pushing its row out of shape. */
+    overflow: visible;
   }
 
   .${DPAD_BTN_CLASS} {
@@ -208,11 +210,18 @@ const buildDpadHtml = () => {
     'Toggle microphone',
     'MICROPHONE_OFF',
   );
+  // Each button is a direct grid child. The grid is 3x3 and each
+  // button uses its own `grid-area` to position itself:
+  //   - up     -> row 1, col 2
+  //   - left   -> row 2, col 1
+  //   - mic    -> row 2, col 2 (the center, slightly larger)
+  //   - right  -> row 2, col 3
+  //   - down   -> row 3, col 2
+  // No slot wrappers \u2014 putting multiple buttons in one grid cell
+  // would cause them to overlap (the bug we just fixed).
   return (
     '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
-      '<div class="' + DPAD_CLASS + '__slot">' + up + '</div>' +
-      '<div class="' + DPAD_CLASS + '__slot">' + left + mic + right + '</div>' +
-      '<div class="' + DPAD_CLASS + '__slot">' + down + '</div>' +
+      up + left + mic + right + down +
     '</div>'
   );
 };
