@@ -165,7 +165,7 @@ const DPAD_STYLES = `
     margin: auto;
     /* The raised dark disc around the mic. */
     background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
-    border: 1px solid rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--dpad-text-1);
     border-radius: 50%;
     color: var(--dpad-text-2);
   }
