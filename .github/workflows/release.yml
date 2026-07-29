@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'   # e.g. v0.1.0, v0.1.1, v1.0.0
+
+jobs:
+  build:
+    name: Build & attach HACS zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the bundle
+        run: npm run build
+
+      - name: Build the HACS release zip
+        run: node scripts/make-release-zip.js
+
+      - name: Show the zip contents
+        run: |
+          echo "Files inside dist/hass-vanilla-boilerplate-card.zip:"
+          unzip -l dist/hass-vanilla-boilerplate-card.zip
+
+      - name: Create / update GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          # Generate release notes from commits since the last tag.
+          generate_release_notes: true
+          files: |
+            dist/hass-vanilla-boilerplate-card.zip
+            hass-vanilla-boilerplate-card.js
