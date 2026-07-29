@@ -1,5 +1,6 @@
 {
   "name": "HASS Vanilla Boilerplate Card",
+  "content_in_root": true,
   "render_readme": true,
   "filename": "hass-vanilla-boilerplate-card.js",
   "country": ["US"],
