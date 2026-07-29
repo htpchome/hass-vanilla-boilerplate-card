@@ -104,8 +104,8 @@ const DPAD_STYLES = `
     background-image: 
       radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
       radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
-    border: 1px solid #ffcc33;
-    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--dpad-text-2);;
+    box-shadow: inset 0 0 12px var(--dpad-text-1);
     overflow: hidden;
   }
 
