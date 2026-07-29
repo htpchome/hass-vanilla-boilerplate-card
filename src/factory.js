@@ -113,16 +113,26 @@ const buildContent = (vm) => {
 };
 
 /**
- * Build the D-pad content area. The D-pad is implemented as its
- * own custom element (`<dpad-control>`, defined in dpad.js) which
- * encapsulates its own shadow DOM, styles, and pointer logic.
- * Here we just drop a single element into the content area.
+ * Build the D-pad + readout content area. Both the D-pad and the
+ * readout are implemented as their own self-contained custom
+ * elements (defined in dpad.js and readout.js respectively).
+ * The factory simply drops both elements into the content area
+ * and lets the consumer wire them up via:
+ *
+ *   const dpad  = card.querySelector('dpad-control');
+ *   const read  = card.querySelector('dpad-readout');
+ *   read.subscribe(dpad);
+ *
+ * The card does NOT auto-subscribe them by default — that would
+ * couple the card to the dpad. Keeping it explicit makes the
+ * boilerplate a true reusable module pair.
  *
  * @returns {string} raw HTML
  */
 const buildDpadContent = () =>
   '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
     '<dpad-control></dpad-control>' +
+    '<dpad-readout></dpad-readout>' +
   '</div>';
 
 /**

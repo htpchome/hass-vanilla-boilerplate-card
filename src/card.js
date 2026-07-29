@@ -25,11 +25,13 @@ import {
   DEFAULTS,
 } from './constants.js';
 import { CardController } from './controller.js';
-// Importing dpad.js for its side effects: it registers the
-// <dpad-control> custom element when this module is loaded. The
-// factory renders <dpad-control> into the detail view's content
-// area; the dpad itself is a fully self-contained module.
+// Importing dpad.js and readout.js for their side effects:
+// they register the <dpad-control> and <dpad-readout> custom
+// elements when these modules are loaded. The factory renders
+// both elements into the detail view's content area; each
+// module is a fully self-contained unit.
 import './dpad.js';
+import './readout.js';
 import { buildCardHtml } from './factory.js';
 import {
   renderErrorMessage,

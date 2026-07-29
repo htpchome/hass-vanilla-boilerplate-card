@@ -103,8 +103,10 @@ export const cardStyles = `
 
   .card-content--dpad {
     display: flex;
+    flex-direction: column;   /* stack dpad on top, readout below */
     align-items: center;
     justify-content: center;
+    gap: 12px;
   }
 
   .card-content p:first-child { margin-top: 0; }
