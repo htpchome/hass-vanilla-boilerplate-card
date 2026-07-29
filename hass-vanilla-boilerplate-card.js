@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.8';
+  const CARD_VERSION = '0.1.9';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
