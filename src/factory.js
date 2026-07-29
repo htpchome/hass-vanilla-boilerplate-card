@@ -26,6 +26,25 @@ import { escapeHtml } from './helpers.js';
 const NAV_CLASS = 'card-nav-arrow';
 const NAV_DATA_TARGET = 'data-card-nav';
 
+// CSS class hooks + data attributes for the D-pad component.
+// Buttons are identified by [data-dpad="<direction>"]; the
+// card wires up pointer events on the host using delegation.
+const DPAD_CLASS = 'dpad';
+const DPAD_BTN_CLASS = 'dpad__btn';
+const DPAD_BTN_UP = 'dpad__btn--up';
+const DPAD_BTN_DOWN = 'dpad__btn--down';
+const DPAD_BTN_LEFT = 'dpad__btn--left';
+const DPAD_BTN_RIGHT = 'dpad__btn--right';
+const DPAD_BTN_MIC = 'dpad__btn--mic';
+const DPAD_DATA_ACTION = 'data-dpad';
+const DPAD_ACTIONS = Object.freeze({
+  UP: 'up',
+  DOWN: 'down',
+  LEFT: 'left',
+  RIGHT: 'right',
+  MIC: 'mic',
+});
+
 // ----------------------------------------------------------------
 // Section builders
 // ----------------------------------------------------------------
@@ -108,13 +127,91 @@ const buildContent = (vm) => {
 };
 
 /**
- * Build an empty content area \u2014 used by views that intentionally
+ * Build an empty content area — used by views that intentionally
  * have no user content (e.g. a static landing page).
  *
  * @returns {string} raw HTML
  */
 const buildEmptyContent = () =>
   '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--empty"></div>';
+
+/**
+ * Build a single D-pad button.
+ *
+ * @param {string} action     one of DPAD_ACTIONS.* (data-dpad value)
+ * @param {string} extraClass BEM modifier (e.g. dpad__btn--up)
+ * @param {string} iconKey    key into ICON_NAMES (e.g. 'DPAD_UP')
+ * @param {string} label      human-readable label for aria-label
+ * @param {string} [activeIconKey] optional alternative icon shown
+ *                            when the button is in the "active"
+ *                            state (used for the mic toggle).
+ * @returns {string} raw HTML
+ */
+const buildDpadButton = (action, extraClass, iconKey, label, activeIconKey) => {
+  // For toggle buttons (mic) we render BOTH icons in the DOM and
+  // toggle visibility via CSS. The default icon is visible when
+  // the button is in its rest state; the active icon is visible
+  // when the parent button has the `is-active` class.
+  let inner = renderIcon(iconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--default' });
+  if (activeIconKey) {
+    inner += renderIcon(activeIconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--active' });
+  }
+  return (
+    '<button type="button" ' +
+      'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
+      DPAD_DATA_ACTION + '="' + escapeHtml(action) + '" ' +
+      'aria-label="' + escapeHtml(label) + '" ' +
+      'aria-pressed="false">' +
+      inner +
+    '</button>'
+  );
+};
+
+/**
+ * Build the full D-pad (4 arrows + center mic button).
+ *
+ * Layout (CSS grid 3x3):
+ *
+ *        [ up   ]
+ *  [ left ][ mic ][ right ]
+ *        [ down ]
+ *
+ * The arrows are momentary (highlight while pressed). The mic is
+ * a toggle (stays on until pressed again; green when on).
+ *
+ * @returns {string} raw HTML
+ */
+const buildDpad = () => {
+  const up = buildDpadButton(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
+  const down = buildDpadButton(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
+  const left = buildDpadButton(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
+  const right = buildDpadButton(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+  const mic = buildDpadButton(
+    DPAD_ACTIONS.MIC,
+    DPAD_BTN_MIC,
+    'MICROPHONE',
+    'Toggle microphone',
+    'MICROPHONE_OFF', // shown when mic is ON (recording in progress)
+  );
+  return (
+    '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
+      '<div class="' + DPAD_CLASS + '__slot">' + up + '</div>' +
+      '<div class="' + DPAD_CLASS + '__slot">' + left + mic + right + '</div>' +
+      '<div class="' + DPAD_CLASS + '__slot">' + down + '</div>' +
+    '</div>'
+  );
+};
+
+/**
+ * Build the D-pad container — used as the content body of the
+ * detail view. Wraps `buildDpad()` in a card-content <div>.
+ *
+ * @returns {string} raw HTML
+ */
+const buildDpadContent = () =>
+  '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
+    buildDpad() +
+  '</div>';
 
 /**
  * Build the card footer (currently just the version string).
@@ -158,24 +255,24 @@ export const buildCardHtml = (vm) => {
   switch (vm.view) {
     case LAYOUTS.DETAIL:
       // Static secondary page: same header + footer as the main
-      // view, but the content <div> is empty.
+      // view, but the content <div> holds a D-pad touchpad.
       return (
         '<ha-card>' +
           '<div class="' + REGIONS.CARD_WRAPPER + '">' +
             buildHeader(vm) +
-            buildEmptyContent() +
+            buildDpadContent() +
             buildFooter(vm) +
           '</div>' +
         '</ha-card>'
       );
     case LAYOUTS.SETTINGS:
       // Reserved for a future settings view. For now, treat it
-      // identically to the detail view.
+      // identically to the detail view (also shows the D-pad).
       return (
         '<ha-card>' +
           '<div class="' + REGIONS.CARD_WRAPPER + '">' +
             buildHeader(vm) +
-            buildEmptyContent() +
+            buildDpadContent() +
             buildFooter(vm) +
           '</div>' +
         '</ha-card>'

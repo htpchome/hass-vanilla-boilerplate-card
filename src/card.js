@@ -167,11 +167,14 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     // Home Assistant doesn't intercept clicks with its own
     // "more-info" dialog or treat the card as a tap target.
     //
-    // Two kinds of listeners may be attached:
+    // Three kinds of listeners may be attached:
     //   1. Internal header-nav arrow clicks (always wired up).
     //      These route through `router.navigate()` and never
     //      dispatch hass-action events.
-    //   2. Optional tap_action / hold_action / double_tap_action
+    //   2. Internal D-pad pointer events (always wired up).
+    //      The D-pad is purely visual + a state toggle on the mic
+    //      button. No hass-action is dispatched.
+    //   3. Optional tap_action / hold_action / double_tap_action
     //      listeners (only attached when the user has configured
     //      them in YAML). The controller's handlers are no-ops
     //      if the corresponding action isn't set.
@@ -191,18 +194,72 @@ class HassVanillaBoilerplateCard extends HTMLElement {
         if (view) router.navigate(view);
       });
 
-      // (2) Optional user-configured tap actions.
+      // (2) Internal D-pad pointer + click handling.
+      //     Buttons are identified by [data-dpad="<action>"].
+      //     Arrow buttons are momentary (CSS class is-pressed).
+      //     The mic button is a toggle (CSS class is-active).
+      //     Pointer events handle both mouse and touch uniformly.
+      const findDpadBtn = (target) =>
+        target instanceof Element ? target.closest('[data-dpad]') : null;
+
+      const clearPressed = (btn) => {
+        if (btn && btn.classList.contains('is-pressed')) {
+          btn.classList.remove('is-pressed');
+        }
+      };
+
+      // pointerdown — start a press for any D-pad button
+      host.addEventListener('pointerdown', (ev) => {
+        const btn = findDpadBtn(ev.target);
+        if (!btn || !host.contains(btn)) return;
+        const action = btn.getAttribute('data-dpad');
+        if (action === 'mic') return; // mic is a click toggle, not a press
+        btn.classList.add('is-pressed');
+        // Capture the pointer so we reliably receive pointerup even
+        // if the user drags off the button (common on touch).
+        if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
+          try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+        }
+      });
+
+      // pointerup / pointercancel — release the press
+      const releaseHandler = (ev) => {
+        const btn = findDpadBtn(ev.target);
+        if (!btn) return;
+        clearPressed(btn);
+      };
+      host.addEventListener('pointerup', releaseHandler);
+      host.addEventListener('pointercancel', releaseHandler);
+      host.addEventListener('pointerleave', (ev) => {
+        // Only clear if the pointer truly left the button (relatedTarget
+        // is outside the button) — this avoids flicker when moving
+        // between child elements within the same button.
+        const btn = findDpadBtn(ev.target);
+        if (!btn) return;
+        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        clearPressed(btn);
+      });
+
+      // click — toggle the mic button
+      host.addEventListener('click', (ev) => {
+        const btn = findDpadBtn(ev.target);
+        if (!btn || !host.contains(btn)) return;
+        if (btn.getAttribute('data-dpad') !== 'mic') return;
+        const isActive = btn.classList.toggle('is-active');
+        btn.setAttribute('aria-pressed', String(isActive));
+      });
+
+      // (3) Optional user-configured tap actions.
       const cfg = this._controller.config || {};
       if (cfg.tap_action) {
         // Tap action is added at the host level so the user can tap
-        // anywhere on the card. We skip the nav arrow buttons so a
-        // tap on the arrow navigates internally, not to the
-        // tap_action.
+        // anywhere on the card. We skip the nav arrow and D-pad
+        // buttons so taps on those go to the internal handlers.
         host.addEventListener('click', (ev) => {
           const target = ev.target;
-          if (target instanceof Element && target.closest('[data-card-nav]')) {
-            return; // nav arrow click — handled above
-          }
+          if (!(target instanceof Element)) return;
+          if (target.closest('[data-card-nav]')) return; // nav arrow
+          if (target.closest('[data-dpad]')) return;     // d-pad
           this._controller.handleClick(this, ev);
         });
       }

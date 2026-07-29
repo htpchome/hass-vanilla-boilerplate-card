@@ -25,6 +25,17 @@ export const ICON_NAMES = Object.freeze({
   // buttons the factory renders to switch between views).
   ARROW_RIGHT: 'mdi:chevron-right',
   ARROW_LEFT: 'mdi:chevron-left',
+  // D-pad arrow icons (for the on-card touchpad). Distinct key
+  // names from the header nav arrows so consumers can tell them
+  // apart at a glance.
+  DPAD_UP: 'mdi:chevron-up',
+  DPAD_DOWN: 'mdi:chevron-down',
+  DPAD_LEFT: 'mdi:chevron-left',
+  DPAD_RIGHT: 'mdi:chevron-right',
+  // Microphone icons (off + on). The card toggles between these
+  // on the D-pad's center button.
+  MICROPHONE: 'mdi:microphone',
+  MICROPHONE_OFF: 'mdi:microphone-off',
 });
 
 // Inline SVG path data — only used if you need a fully offline

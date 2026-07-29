@@ -591,6 +591,17 @@
     // buttons the factory renders to switch between views).
     ARROW_RIGHT: 'mdi:chevron-right',
     ARROW_LEFT: 'mdi:chevron-left',
+    // D-pad arrow icons (for the on-card touchpad). Distinct key
+    // names from the header nav arrows so consumers can tell them
+    // apart at a glance.
+    DPAD_UP: 'mdi:chevron-up',
+    DPAD_DOWN: 'mdi:chevron-down',
+    DPAD_LEFT: 'mdi:chevron-left',
+    DPAD_RIGHT: 'mdi:chevron-right',
+    // Microphone icons (off + on). The card toggles between these
+    // on the D-pad's center button.
+    MICROPHONE: 'mdi:microphone',
+    MICROPHONE_OFF: 'mdi:microphone-off',
   });
 
   // Inline SVG path data — only used if you need a fully offline
@@ -660,6 +671,25 @@
   // on the host, using [data-card-nav="<target-view>"].
   const NAV_CLASS = 'card-nav-arrow';
   const NAV_DATA_TARGET = 'data-card-nav';
+
+  // CSS class hooks + data attributes for the D-pad component.
+  // Buttons are identified by [data-dpad="<direction>"]; the
+  // card wires up pointer events on the host using delegation.
+  const DPAD_CLASS = 'dpad';
+  const DPAD_BTN_CLASS = 'dpad__btn';
+  const DPAD_BTN_UP = 'dpad__btn--up';
+  const DPAD_BTN_DOWN = 'dpad__btn--down';
+  const DPAD_BTN_LEFT = 'dpad__btn--left';
+  const DPAD_BTN_RIGHT = 'dpad__btn--right';
+  const DPAD_BTN_MIC = 'dpad__btn--mic';
+  const DPAD_DATA_ACTION = 'data-dpad';
+  const DPAD_ACTIONS = Object.freeze({
+    UP: 'up',
+    DOWN: 'down',
+    LEFT: 'left',
+    RIGHT: 'right',
+    MIC: 'mic',
+  });
 
   // ----------------------------------------------------------------
   // Section builders
@@ -743,13 +773,82 @@
   };
 
   /**
-   * Build an empty content area \u2014 used by views that intentionally
-   * have no user content (e.g. a static landing page).
+   * Build a single D-pad button.
+   *
+   * @param {string} action     one of DPAD_ACTIONS.* (data-dpad value)
+   * @param {string} extraClass BEM modifier (e.g. dpad__btn--up)
+   * @param {string} iconKey    key into ICON_NAMES (e.g. 'DPAD_UP')
+   * @param {string} label      human-readable label for aria-label
+   * @param {string} [activeIconKey] optional alternative icon shown
+   *                            when the button is in the "active"
+   *                            state (used for the mic toggle).
+   * @returns {string} raw HTML
+   */
+  const buildDpadButton = (action, extraClass, iconKey, label, activeIconKey) => {
+    // For toggle buttons (mic) we render BOTH icons in the DOM and
+    // toggle visibility via CSS. The default icon is visible when
+    // the button is in its rest state; the active icon is visible
+    // when the parent button has the `is-active` class.
+    let inner = renderIcon(iconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--default' });
+    if (activeIconKey) {
+      inner += renderIcon(activeIconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--active' });
+    }
+    return (
+      '<button type="button" ' +
+        'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
+        DPAD_DATA_ACTION + '="' + escapeHtml(action) + '" ' +
+        'aria-label="' + escapeHtml(label) + '" ' +
+        'aria-pressed="false">' +
+        inner +
+      '</button>'
+    );
+  };
+
+  /**
+   * Build the full D-pad (4 arrows + center mic button).
+   *
+   * Layout (CSS grid 3x3):
+   *
+   *        [ up   ]
+   *  [ left ][ mic ][ right ]
+   *        [ down ]
+   *
+   * The arrows are momentary (highlight while pressed). The mic is
+   * a toggle (stays on until pressed again; green when on).
    *
    * @returns {string} raw HTML
    */
-  const buildEmptyContent = () =>
-    '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--empty"></div>';
+  const buildDpad = () => {
+    const up = buildDpadButton(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
+    const down = buildDpadButton(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
+    const left = buildDpadButton(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
+    const right = buildDpadButton(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+    const mic = buildDpadButton(
+      DPAD_ACTIONS.MIC,
+      DPAD_BTN_MIC,
+      'MICROPHONE',
+      'Toggle microphone',
+      'MICROPHONE_OFF', // shown when mic is ON (recording in progress)
+    );
+    return (
+      '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
+        '<div class="' + DPAD_CLASS + '__slot">' + up + '</div>' +
+        '<div class="' + DPAD_CLASS + '__slot">' + left + mic + right + '</div>' +
+        '<div class="' + DPAD_CLASS + '__slot">' + down + '</div>' +
+      '</div>'
+    );
+  };
+
+  /**
+   * Build the D-pad container — used as the content body of the
+   * detail view. Wraps `buildDpad()` in a card-content <div>.
+   *
+   * @returns {string} raw HTML
+   */
+  const buildDpadContent = () =>
+    '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
+      buildDpad() +
+    '</div>';
 
   /**
    * Build the card footer (currently just the version string).
@@ -774,24 +873,24 @@
     switch (vm.view) {
       case LAYOUTS.DETAIL:
         // Static secondary page: same header + footer as the main
-        // view, but the content <div> is empty.
+        // view, but the content <div> holds a D-pad touchpad.
         return (
           '<ha-card>' +
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
               buildHeader(vm) +
-              buildEmptyContent() +
+              buildDpadContent() +
               buildFooter(vm) +
             '</div>' +
           '</ha-card>'
         );
       case LAYOUTS.SETTINGS:
         // Reserved for a future settings view. For now, treat it
-        // identically to the detail view.
+        // identically to the detail view (also shows the D-pad).
         return (
           '<ha-card>' +
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
               buildHeader(vm) +
-              buildEmptyContent() +
+              buildDpadContent() +
               buildFooter(vm) +
             '</div>' +
           '</ha-card>'
@@ -925,6 +1024,106 @@
   }
 `;
 
+  // D-pad touchpad — used as the content body of the detail view.
+  // Neutral colors that adapt to the active theme; arrow buttons
+  // flash to --primary-color when held; the center mic toggle
+  // turns green when active.
+  const dpadStyles = `
+  .card-content--dpad {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .dpad {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    width: 220px;
+    height: 220px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .dpad__slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* D-pad button base — circular, neutral background */
+  .dpad__btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    max-width: 64px;
+    max-height: 64px;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    margin: 0;
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 80ms ease, color 80ms ease,
+                border-color 80ms ease, transform 80ms ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .dpad__btn:hover {
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.16));
+  }
+
+  .dpad__btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  .dpad__btn ha-icon {
+    --mdc-icon-size: 28px;
+    pointer-events: none;
+  }
+
+  /* Direction modifiers shift each button into its grid cell */
+  .dpad__btn--up    { grid-area: 1 / 2; }
+  .dpad__btn--down  { grid-area: 3 / 2; }
+  .dpad__btn--left  { grid-area: 2 / 1; }
+  .dpad__btn--right { grid-area: 2 / 3; }
+  .dpad__btn--mic   { grid-area: 2 / 2; max-width: 72px; max-height: 72px; }
+
+  /* Momentary pressed state for arrow buttons */
+  .dpad__btn.is-pressed {
+    background: var(--primary-color);
+    color: var(--card-background-color, #fff);
+    border-color: var(--primary-color);
+    transform: scale(0.95);
+  }
+
+  /* Mic toggle: when active, green background */
+  .dpad__btn--mic.is-active {
+    background: #4caf50;          /* fallback green */
+    background: var(--ha-color-green, #4caf50);
+    color: #fff;
+    border-color: var(--ha-color-green, #4caf50);
+  }
+
+  /* Mic icon swap: hide default icon when active, show off icon */
+  .dpad__btn--mic .dpad__icon--active { display: none; }
+  .dpad__btn--mic.is-active .dpad__icon--default { display: none; }
+  .dpad__btn--mic.is-active .dpad__icon--active  { display: inline-flex; }
+`;
+
   // Header nav arrow button — used to switch between internal views.
   const navStyles = `
   .card-nav-arrow {
@@ -1026,6 +1225,7 @@
     baseStyles,
     cardStyles,
     navStyles,
+    dpadStyles,
     statusStyles,
   ].join('\n');
 
@@ -1186,11 +1386,14 @@
       // Home Assistant doesn't intercept clicks with its own
       // "more-info" dialog or treat the card as a tap target.
       //
-      // Two kinds of listeners may be attached:
+      // Three kinds of listeners may be attached:
       //   1. Internal header-nav arrow clicks (always wired up).
       //      These route through `router.navigate()` and never
       //      dispatch hass-action events.
-      //   2. Optional tap_action / hold_action / double_tap_action
+      //   2. Internal D-pad pointer events (always wired up).
+      //      The D-pad is purely visual + a state toggle on the mic
+      //      button. No hass-action is dispatched.
+      //   3. Optional tap_action / hold_action / double_tap_action
       //      listeners (only attached when the user has configured
       //      them in YAML). The controller's handlers are no-ops
       //      if the corresponding action isn't set.
@@ -1210,18 +1413,72 @@
           if (view) router.navigate(view);
         });
 
-        // (2) Optional user-configured tap actions.
+        // (2) Internal D-pad pointer + click handling.
+        //     Buttons are identified by [data-dpad="<action>"].
+        //     Arrow buttons are momentary (CSS class is-pressed).
+        //     The mic button is a toggle (CSS class is-active).
+        //     Pointer events handle both mouse and touch uniformly.
+        const findDpadBtn = (target) =>
+          target instanceof Element ? target.closest('[data-dpad]') : null;
+
+        const clearPressed = (btn) => {
+          if (btn && btn.classList.contains('is-pressed')) {
+            btn.classList.remove('is-pressed');
+          }
+        };
+
+        // pointerdown — start a press for any D-pad button
+        host.addEventListener('pointerdown', (ev) => {
+          const btn = findDpadBtn(ev.target);
+          if (!btn || !host.contains(btn)) return;
+          const action = btn.getAttribute('data-dpad');
+          if (action === 'mic') return; // mic is a click toggle, not a press
+          btn.classList.add('is-pressed');
+          // Capture the pointer so we reliably receive pointerup even
+          // if the user drags off the button (common on touch).
+          if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
+            try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+          }
+        });
+
+        // pointerup / pointercancel — release the press
+        const releaseHandler = (ev) => {
+          const btn = findDpadBtn(ev.target);
+          if (!btn) return;
+          clearPressed(btn);
+        };
+        host.addEventListener('pointerup', releaseHandler);
+        host.addEventListener('pointercancel', releaseHandler);
+        host.addEventListener('pointerleave', (ev) => {
+          // Only clear if the pointer truly left the button (relatedTarget
+          // is outside the button) — this avoids flicker when moving
+          // between child elements within the same button.
+          const btn = findDpadBtn(ev.target);
+          if (!btn) return;
+          if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+          clearPressed(btn);
+        });
+
+        // click — toggle the mic button
+        host.addEventListener('click', (ev) => {
+          const btn = findDpadBtn(ev.target);
+          if (!btn || !host.contains(btn)) return;
+          if (btn.getAttribute('data-dpad') !== 'mic') return;
+          const isActive = btn.classList.toggle('is-active');
+          btn.setAttribute('aria-pressed', String(isActive));
+        });
+
+        // (3) Optional user-configured tap actions.
         const cfg = this._controller.config || {};
         if (cfg.tap_action) {
           // Tap action is added at the host level so the user can tap
-          // anywhere on the card. We skip the nav arrow buttons so a
-          // tap on the arrow navigates internally, not to the
-          // tap_action.
+          // anywhere on the card. We skip the nav arrow and D-pad
+          // buttons so taps on those go to the internal handlers.
           host.addEventListener('click', (ev) => {
             const target = ev.target;
-            if (target instanceof Element && target.closest('[data-card-nav]')) {
-              return; // nav arrow click — handled above
-            }
+            if (!(target instanceof Element)) return;
+            if (target.closest('[data-card-nav]')) return; // nav arrow
+            if (target.closest('[data-dpad]')) return;     // d-pad
             this._controller.handleClick(this, ev);
           });
         }
