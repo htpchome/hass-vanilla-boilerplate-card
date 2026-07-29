@@ -83,6 +83,10 @@ const DPAD_STYLES = `
     --dpad-arrow-icon-size: 42px;   /* 150% larger than original 28px */
     --dpad-mic-size: 96px;          /* 150% larger than original 64px */
     --dpad-mic-icon-size: 54px;     /* 150% larger than original 36px */
+    --dpad-bg-1: var(--secondary-background-color);
+    --dpad-bg-2: var(--primary-background-color);
+    --dpad-text-1: var(--primary-text-color);
+    --dpad-text-2: var(--secondary-text-color);
   }
 
   .${DPAD_CLASS} {
@@ -100,8 +104,8 @@ const DPAD_STYLES = `
     /* Plate gradient (no decorative overlay). */
     /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
     background-image: 
-      radial-gradient(circle 95% at top left, #202020 15%, #303030 100% 100%),
-      radial-gradient(circle 100% at top left, #fcfcfc 15%, #999999 100%);
+      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+      radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
     border: 1px solid #444;
     box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
@@ -117,7 +121,7 @@ const DPAD_STYLES = `
     padding: 0;
     margin: 0;
     background: transparent;
-    color: rgba(128, 128, 128, 0.5); /* muted icon color */
+    color: var(--dpad-text-2); /* muted icon color */
     border: none;
     border-radius: 0;
     cursor: pointer;
@@ -136,7 +140,7 @@ const DPAD_STYLES = `
      on both touch and mouse. */
   @media (hover: hover) {
     .${DPAD_BTN_CLASS}:hover {
-      color: rgba(180, 180, 180, 0.9);
+      color: var(--dpad-text-1);
     }
   }
 
@@ -162,10 +166,10 @@ const DPAD_STYLES = `
     justify-self: center;
     margin: auto;
     /* The raised dark disc around the mic. */
-    background: radial-gradient(circle at top left, #303030 15%, #101010 100%);
+    background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
     border: 1px solid rgba(0, 0, 0, 0.5);
     border-radius: 50%;
-    color: rgba(128, 128, 128, 0.8);
+    color: var(--dpad-text-2);
   }
 
   .${DPAD_BTN_MIC} ha-icon {
@@ -175,7 +179,7 @@ const DPAD_STYLES = `
   /* Momentary pressed state for arrow buttons — just brighten
      the icon, no background change (the plate is the background). */
   .${DPAD_BTN_CLASS}.is-pressed {
-    color: #fff;
+    color: var(--dpad-text-1);
     transform: scale(0.92);
   }
 
@@ -183,8 +187,8 @@ const DPAD_STYLES = `
      the central disc. (Background stays dark per the reference.) */
   .${DPAD_BTN_MIC}.is-active {
     box-shadow:
-      inset 0 0 0 2px var(--ha-color-green, #4caf50),
-      inset 0 0 12px rgba(76, 175, 80, 0.4);
+      inset 0 0 0 2px var(--success-color),
+      inset 0 0 12px var(--success-color);
   }
 
   /* Mic icon swap: hide default when active, show "off" icon. */
