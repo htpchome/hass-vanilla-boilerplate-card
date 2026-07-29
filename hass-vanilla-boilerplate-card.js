@@ -648,6 +648,403 @@
   };
 
   /**
+   * dpad.js
+   * ---------------------------------------------------------------
+   * Reusable D-pad touchpad custom element: <dpad-control>
+   *
+   * Drop this element into any HTML (or shadow root) and it will
+   * render a 5-button circular touchpad:
+   *
+   *        [ ▲ ]
+   *  [ ◄ ]  [ 🎙 ]  [ ► ]
+   *        [ ▼ ]
+   *
+   *   - 4 arrow buttons are momentary. While held they show
+   *     --primary-color. On release they fire `dpad-release`.
+   *   - The center microphone button is a toggle. When active it
+   *     shows green (--ha-color-green) and the icon swaps from
+   *     mdi:microphone to mdi:microphone-off. Each toggle fires
+   *     `dpad-toggle` with detail `{ active: boolean }`.
+   *
+   * The element is fully self-contained:
+   *   - Shadow DOM for style isolation
+   *   - Native HA design tokens (auto-themes light/dark/custom)
+   *   - Owns its own pointer event handling (mouse + touch)
+   *   - Dispatches standard CustomEvents that bubble+compose, so
+   *     consumers in any shadow root can listen for them.
+   *
+   * No coupling to card.js, controller.js, or any other module in
+   * this project — you can copy this file into another project and
+   * use <dpad-control> as-is.
+   * ---------------------------------------------------------------
+   */
+
+
+  // ----------------------------------------------------------------
+  // Internal class hooks & data attributes (kept private to the module)
+  // ----------------------------------------------------------------
+
+  const DPAD_CLASS = 'dpad';
+  const DPAD_BTN_CLASS = 'dpad__btn';
+  const DPAD_BTN_UP = 'dpad__btn--up';
+  const DPAD_BTN_DOWN = 'dpad__btn--down';
+  const DPAD_BTN_LEFT = 'dpad__btn--left';
+  const DPAD_BTN_RIGHT = 'dpad__btn--right';
+  const DPAD_BTN_MIC = 'dpad__btn--mic';
+  const DPAD_DATA_ACTION = 'data-dpad-action';
+  const DPAD_ACTIONS = Object.freeze({
+    UP: 'up',
+    DOWN: 'down',
+    LEFT: 'left',
+    RIGHT: 'right',
+    MIC: 'mic',
+  });
+
+  // Custom events dispatched on the host element.
+  const EVT_PRESS = 'dpad-press';
+  const EVT_RELEASE = 'dpad-release';
+  const EVT_TOGGLE = 'dpad-toggle';
+
+  // ----------------------------------------------------------------
+  // Styles \u2014 self-contained, uses only HA design tokens for theming
+  // ----------------------------------------------------------------
+
+  const DPAD_STYLES = `
+  :host {
+    display: block;
+    --dpad-size: 220px;
+    --dpad-btn-size: 64px;
+    --dpad-mic-size: 72px;
+  }
+
+  .${DPAD_CLASS} {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    width: var(--dpad-size);
+    height: var(--dpad-size);
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .${DPAD_CLASS}__slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .${DPAD_BTN_CLASS} {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    max-width: var(--dpad-btn-size);
+    max-height: var(--dpad-btn-size);
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    margin: 0;
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 80ms ease, color 80ms ease,
+                border-color 80ms ease, transform 80ms ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .${DPAD_BTN_CLASS}:hover {
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.16));
+  }
+
+  .${DPAD_BTN_CLASS}:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  .${DPAD_BTN_CLASS} ha-icon {
+    --mdc-icon-size: 28px;
+    pointer-events: none;
+  }
+
+  .${DPAD_BTN_UP}    { grid-area: 1 / 2; }
+  .${DPAD_BTN_DOWN}  { grid-area: 3 / 2; }
+  .${DPAD_BTN_LEFT}  { grid-area: 2 / 1; }
+  .${DPAD_BTN_RIGHT} { grid-area: 2 / 3; }
+  .${DPAD_BTN_MIC}   {
+    grid-area: 2 / 2;
+    max-width: var(--dpad-mic-size);
+    max-height: var(--dpad-mic-size);
+  }
+
+  /* Momentary pressed state for arrow buttons. */
+  .${DPAD_BTN_CLASS}.is-pressed {
+    background: var(--primary-color);
+    color: var(--card-background-color, #fff);
+    border-color: var(--primary-color);
+    transform: scale(0.95);
+  }
+
+  /* Mic toggle: when active, green background. */
+  .${DPAD_BTN_MIC}.is-active {
+    background: var(--ha-color-green, #4caf50);
+    color: #fff;
+    border-color: var(--ha-color-green, #4caf50);
+  }
+
+  /* Mic icon swap: hide default when active, show "off" icon. */
+  .${DPAD_BTN_MIC} .dpad__icon--active { display: none; }
+  .${DPAD_BTN_MIC}.is-active .dpad__icon--default { display: none; }
+  .${DPAD_BTN_MIC}.is-active .dpad__icon--active  { display: inline-flex; }
+`;
+
+  // ----------------------------------------------------------------
+  // DOM construction
+  // ----------------------------------------------------------------
+
+  /**
+   * Build the inner DOM tree for a D-pad button.
+   *
+   * @param {string} action     one of DPAD_ACTIONS.*
+   * @param {string} extraClass BEM modifier
+   * @param {string} iconKey    key into ICON_NAMES (default icon)
+   * @param {string} label      aria-label
+   * @param {string} [activeIconKey] optional alt icon for toggles
+   * @returns {string} raw HTML
+   */
+  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderIcon(iconKey, {
+      className: DPAD_BTN_CLASS + '__icon dpad__icon--default',
+    });
+    if (activeIconKey) {
+      inner += renderIcon(activeIconKey, {
+        className: DPAD_BTN_CLASS + '__icon dpad__icon--active',
+      });
+    }
+    return (
+      '<button type="button" ' +
+        'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
+        DPAD_DATA_ACTION + '="' + action + '" ' +
+        'aria-label="' + label + '" ' +
+        'aria-pressed="false">' +
+        inner +
+      '</button>'
+    );
+  };
+
+  /**
+   * Render the full D-pad markup.
+   * @returns {string} raw HTML
+   */
+  const buildDpadHtml = () => {
+    const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
+    const down = buildButtonHtml(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
+    const left = buildButtonHtml(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
+    const right = buildButtonHtml(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+    const mic = buildButtonHtml(
+      DPAD_ACTIONS.MIC,
+      DPAD_BTN_MIC,
+      'MICROPHONE',
+      'Toggle microphone',
+      'MICROPHONE_OFF',
+    );
+    return (
+      '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
+        '<div class="' + DPAD_CLASS + '__slot">' + up + '</div>' +
+        '<div class="' + DPAD_CLASS + '__slot">' + left + mic + right + '</div>' +
+        '<div class="' + DPAD_CLASS + '__slot">' + down + '</div>' +
+      '</div>'
+    );
+  };
+
+  // ----------------------------------------------------------------
+  // The custom element
+  // ----------------------------------------------------------------
+
+  /**
+   * <dpad-control> \u2014 a reusable D-pad touchpad custom element.
+   *
+   * Public API:
+   *   - setActive(action, active)  programmatically toggle a button
+   *   - getState()                 returns { mic: boolean }
+   *   - addEventListener('dpad-press', fn)     { action, originalEvent }
+   *   - addEventListener('dpad-release', fn)   { action, originalEvent }
+   *   - addEventListener('dpad-toggle', fn)    { action, active, originalEvent }
+   *
+   * All events bubble and are composed, so they cross shadow
+   * boundaries. Consumers in any shadow root can listen to them.
+   */
+  class DpadControl extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+      // State: which buttons are currently pressed / active.
+      this._pressed = new Set();
+      this._activeMic = false;
+    }
+
+    // ---- lifecycle ----
+
+    connectedCallback() {
+      this._mount();
+      this._wirePointerEvents();
+    }
+
+    disconnectedCallback() {
+      // Best-effort: clear any pressed state when the element is
+      // removed from the DOM so we don't leak listeners.
+      this._pressed.clear();
+    }
+
+    // ---- public API ----
+
+    /**
+     * Programmatically set the active state of a button.
+     *
+     * @param {string} action one of DPAD_ACTIONS.*
+     * @param {boolean} active true to activate, false to deactivate
+     */
+    setActive(action, active) {
+      if (action === DPAD_ACTIONS.MIC) {
+        this._activeMic = Boolean(active);
+        this._applyMicState();
+      }
+      // Arrow buttons are momentary; programmatic setActive on them
+      // is a no-op. Use dispatchEvent via setPressed() if you need
+      // to simulate a press.
+    }
+
+    /**
+     * Read the current persistent state of the D-pad.
+     * (Momentary press state is not exposed \u2014 only toggles.)
+     *
+     * @returns {{ mic: boolean }}
+     */
+    getState() {
+      return { mic: this._activeMic };
+    }
+
+    // ---- internals ----
+
+    _mount() {
+      const style = document.createElement('style');
+      style.textContent = DPAD_STYLES;
+
+      const host = document.createElement('div');
+      host.innerHTML = buildDpadHtml();
+
+      this.shadowRoot.appendChild(style);
+      this.shadowRoot.appendChild(host.firstElementChild);
+    }
+
+    _wirePointerEvents() {
+      const root = this.shadowRoot;
+      if (!root) return;
+
+      const findBtn = (target) =>
+        target instanceof Element ? target.closest('[' + DPAD_DATA_ACTION + ']') : null;
+
+      const clearPressed = (btn) => {
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        this._pressed.delete(action);
+        btn.classList.remove('is-pressed');
+      };
+
+      // pointerdown: start a press for any D-pad button
+      root.addEventListener('pointerdown', (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_DATA_ACTION);
+        if (action === DPAD_ACTIONS.MIC) return; // mic is a click toggle, not a press
+        this._pressed.add(action);
+        btn.classList.add('is-pressed');
+        this._dispatch(EVT_PRESS, { action });
+        // Capture pointer so we still receive pointerup if the user
+        // drags off the button (common on touch).
+        if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
+          try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+        }
+      });
+
+      // pointerup / pointercancel: release the press
+      const release = (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      };
+      root.addEventListener('pointerup', release);
+      root.addEventListener('pointercancel', release);
+
+      // pointerleave: clear if the pointer truly leaves the button
+      root.addEventListener('pointerleave', (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        clearPressed(btn);
+      });
+
+      // click: toggle the mic button
+      root.addEventListener('click', (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
+        this._activeMic = !this._activeMic;
+        this._applyMicState();
+        this._dispatch(EVT_TOGGLE, {
+          action: DPAD_ACTIONS.MIC,
+          active: this._activeMic,
+        });
+      });
+    }
+
+    _applyMicState() {
+      const root = this.shadowRoot;
+      if (!root) return;
+      const mic = root.querySelector('.' + DPAD_BTN_MIC);
+      if (!mic) return;
+      mic.classList.toggle('is-active', this._activeMic);
+      mic.setAttribute('aria-pressed', String(this._activeMic));
+    }
+
+    /**
+     * Dispatch a CustomEvent on the host with composed:true so it
+     * crosses the shadow DOM boundary. Listeners on the host (or
+     * any ancestor) will see it.
+     *
+     * @param {string} type
+     * @param {object} detail
+     */
+    _dispatch(type, detail) {
+      this.dispatchEvent(
+        new CustomEvent(type, {
+          detail: { ...detail, originalEvent: undefined },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  // Register the custom element. Guard against double-registration
+  // (e.g. if this module is imported more than once).
+  if (typeof customElements !== 'undefined' && !customElements.get('dpad-control')) {
+    customElements.define('dpad-control', DpadControl);
+  }
+
+  /**
    * factory.js
    * ---------------------------------------------------------------
    * Creational factory pattern.
@@ -657,11 +1054,16 @@
    * into its shadow DOM. It pulls in:
    *   - icons.js   for decorative <ha-icon> elements (incl. nav arrows)
    *   - helpers.js for safety (escapeHtml, etc.)
-   *   - styles.js  indirectly \u2014 the card injects styles itself;
+   *   - styles.js  indirectly — the card injects styles itself;
    *                the factory only emits *class* hooks
    *
    * The factory never touches `hass` or `this`. It is a pure
-   * function of its input \u2014 easy to test and easy to reason about.
+   * function of its input — easy to test and easy to reason about.
+   *
+   * Note: the D-pad touchpad is a separate self-contained custom
+   * element (`<dpad-control>`) defined in dpad.js. The factory just
+   * drops a `<dpad-control>` element into the detail view's
+   * content area; it has no knowledge of the D-pad's internals.
    * ---------------------------------------------------------------
    */
 
@@ -671,25 +1073,6 @@
   // on the host, using [data-card-nav="<target-view>"].
   const NAV_CLASS = 'card-nav-arrow';
   const NAV_DATA_TARGET = 'data-card-nav';
-
-  // CSS class hooks + data attributes for the D-pad component.
-  // Buttons are identified by [data-dpad="<direction>"]; the
-  // card wires up pointer events on the host using delegation.
-  const DPAD_CLASS = 'dpad';
-  const DPAD_BTN_CLASS = 'dpad__btn';
-  const DPAD_BTN_UP = 'dpad__btn--up';
-  const DPAD_BTN_DOWN = 'dpad__btn--down';
-  const DPAD_BTN_LEFT = 'dpad__btn--left';
-  const DPAD_BTN_RIGHT = 'dpad__btn--right';
-  const DPAD_BTN_MIC = 'dpad__btn--mic';
-  const DPAD_DATA_ACTION = 'data-dpad';
-  const DPAD_ACTIONS = Object.freeze({
-    UP: 'up',
-    DOWN: 'down',
-    LEFT: 'left',
-    RIGHT: 'right',
-    MIC: 'mic',
-  });
 
   // ----------------------------------------------------------------
   // Section builders
@@ -773,81 +1156,16 @@
   };
 
   /**
-   * Build a single D-pad button.
-   *
-   * @param {string} action     one of DPAD_ACTIONS.* (data-dpad value)
-   * @param {string} extraClass BEM modifier (e.g. dpad__btn--up)
-   * @param {string} iconKey    key into ICON_NAMES (e.g. 'DPAD_UP')
-   * @param {string} label      human-readable label for aria-label
-   * @param {string} [activeIconKey] optional alternative icon shown
-   *                            when the button is in the "active"
-   *                            state (used for the mic toggle).
-   * @returns {string} raw HTML
-   */
-  const buildDpadButton = (action, extraClass, iconKey, label, activeIconKey) => {
-    // For toggle buttons (mic) we render BOTH icons in the DOM and
-    // toggle visibility via CSS. The default icon is visible when
-    // the button is in its rest state; the active icon is visible
-    // when the parent button has the `is-active` class.
-    let inner = renderIcon(iconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--default' });
-    if (activeIconKey) {
-      inner += renderIcon(activeIconKey, { className: DPAD_BTN_CLASS + '__icon dpad__icon--active' });
-    }
-    return (
-      '<button type="button" ' +
-        'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
-        DPAD_DATA_ACTION + '="' + escapeHtml(action) + '" ' +
-        'aria-label="' + escapeHtml(label) + '" ' +
-        'aria-pressed="false">' +
-        inner +
-      '</button>'
-    );
-  };
-
-  /**
-   * Build the full D-pad (4 arrows + center mic button).
-   *
-   * Layout (CSS grid 3x3):
-   *
-   *        [ up   ]
-   *  [ left ][ mic ][ right ]
-   *        [ down ]
-   *
-   * The arrows are momentary (highlight while pressed). The mic is
-   * a toggle (stays on until pressed again; green when on).
-   *
-   * @returns {string} raw HTML
-   */
-  const buildDpad = () => {
-    const up = buildDpadButton(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
-    const down = buildDpadButton(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
-    const left = buildDpadButton(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
-    const right = buildDpadButton(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
-    const mic = buildDpadButton(
-      DPAD_ACTIONS.MIC,
-      DPAD_BTN_MIC,
-      'MICROPHONE',
-      'Toggle microphone',
-      'MICROPHONE_OFF', // shown when mic is ON (recording in progress)
-    );
-    return (
-      '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
-        '<div class="' + DPAD_CLASS + '__slot">' + up + '</div>' +
-        '<div class="' + DPAD_CLASS + '__slot">' + left + mic + right + '</div>' +
-        '<div class="' + DPAD_CLASS + '__slot">' + down + '</div>' +
-      '</div>'
-    );
-  };
-
-  /**
-   * Build the D-pad container — used as the content body of the
-   * detail view. Wraps `buildDpad()` in a card-content <div>.
+   * Build the D-pad content area. The D-pad is implemented as its
+   * own custom element (`<dpad-control>`, defined in dpad.js) which
+   * encapsulates its own shadow DOM, styles, and pointer logic.
+   * Here we just drop a single element into the content area.
    *
    * @returns {string} raw HTML
    */
   const buildDpadContent = () =>
     '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
-      buildDpad() +
+      '<dpad-control></dpad-control>' +
     '</div>';
 
   /**
@@ -873,7 +1191,7 @@
     switch (vm.view) {
       case LAYOUTS.DETAIL:
         // Static secondary page: same header + footer as the main
-        // view, but the content <div> holds a D-pad touchpad.
+        // view, but the content area holds a <dpad-control>.
         return (
           '<ha-card>' +
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
@@ -885,7 +1203,7 @@
         );
       case LAYOUTS.SETTINGS:
         // Reserved for a future settings view. For now, treat it
-        // identically to the detail view (also shows the D-pad).
+        // identically to the detail view.
         return (
           '<ha-card>' +
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
@@ -1012,6 +1330,12 @@
     /* Allow user-supplied HTML to be styled by its own CSS */
   }
 
+  .card-content--dpad {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .card-content p:first-child { margin-top: 0; }
   .card-content p:last-child  { margin-bottom: 0; }
 
@@ -1022,106 +1346,6 @@
     text-align: right;
     border-top: 1px solid var(--divider-color, transparent);
   }
-`;
-
-  // D-pad touchpad — used as the content body of the detail view.
-  // Neutral colors that adapt to the active theme; arrow buttons
-  // flash to --primary-color when held; the center mic toggle
-  // turns green when active.
-  const dpadStyles = `
-  .card-content--dpad {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-
-  .dpad {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 4px;
-    width: 220px;
-    height: 220px;
-    max-width: 100%;
-    aspect-ratio: 1 / 1;
-  }
-
-  .dpad__slot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    min-height: 0;
-  }
-
-  /* D-pad button base — circular, neutral background */
-  .dpad__btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    max-width: 64px;
-    max-height: 64px;
-    aspect-ratio: 1 / 1;
-    padding: 0;
-    margin: 0;
-    background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
-    color: var(--primary-text-color);
-    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 80ms ease, color 80ms ease,
-                border-color 80ms ease, transform 80ms ease;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-
-  .dpad__btn:hover {
-    background: var(--secondary-background-color, rgba(127, 127, 127, 0.16));
-  }
-
-  .dpad__btn:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
-
-  .dpad__btn ha-icon {
-    --mdc-icon-size: 28px;
-    pointer-events: none;
-  }
-
-  /* Direction modifiers shift each button into its grid cell */
-  .dpad__btn--up    { grid-area: 1 / 2; }
-  .dpad__btn--down  { grid-area: 3 / 2; }
-  .dpad__btn--left  { grid-area: 2 / 1; }
-  .dpad__btn--right { grid-area: 2 / 3; }
-  .dpad__btn--mic   { grid-area: 2 / 2; max-width: 72px; max-height: 72px; }
-
-  /* Momentary pressed state for arrow buttons */
-  .dpad__btn.is-pressed {
-    background: var(--primary-color);
-    color: var(--card-background-color, #fff);
-    border-color: var(--primary-color);
-    transform: scale(0.95);
-  }
-
-  /* Mic toggle: when active, green background */
-  .dpad__btn--mic.is-active {
-    background: #4caf50;          /* fallback green */
-    background: var(--ha-color-green, #4caf50);
-    color: #fff;
-    border-color: var(--ha-color-green, #4caf50);
-  }
-
-  /* Mic icon swap: hide default icon when active, show off icon */
-  .dpad__btn--mic .dpad__icon--active { display: none; }
-  .dpad__btn--mic.is-active .dpad__icon--default { display: none; }
-  .dpad__btn--mic.is-active .dpad__icon--active  { display: inline-flex; }
 `;
 
   // Header nav arrow button — used to switch between internal views.
@@ -1225,7 +1449,6 @@
     baseStyles,
     cardStyles,
     navStyles,
-    dpadStyles,
     statusStyles,
   ].join('\n');
 
@@ -1386,14 +1609,16 @@
       // Home Assistant doesn't intercept clicks with its own
       // "more-info" dialog or treat the card as a tap target.
       //
-      // Three kinds of listeners may be attached:
+      // Two kinds of listeners may be attached:
       //   1. Internal header-nav arrow clicks (always wired up).
       //      These route through `router.navigate()` and never
-      //      dispatch hass-action events.
-      //   2. Internal D-pad pointer events (always wired up).
-      //      The D-pad is purely visual + a state toggle on the mic
-      //      button. No hass-action is dispatched.
-      //   3. Optional tap_action / hold_action / double_tap_action
+      //      dispatch hass-action events. The D-pad is also
+      //      fully self-contained (see dpad.js) — it dispatches its
+      //      own `dpad-press` / `dpad-release` / `dpad-toggle`
+      //      events on its host element, which cross the shadow
+      //      boundary via composed:true, so this card can listen
+      //      to them too if it ever needs to.
+      //   2. Optional tap_action / hold_action / double_tap_action
       //      listeners (only attached when the user has configured
       //      them in YAML). The controller's handlers are no-ops
       //      if the corresponding action isn't set.
@@ -1413,72 +1638,21 @@
           if (view) router.navigate(view);
         });
 
-        // (2) Internal D-pad pointer + click handling.
-        //     Buttons are identified by [data-dpad="<action>"].
-        //     Arrow buttons are momentary (CSS class is-pressed).
-        //     The mic button is a toggle (CSS class is-active).
-        //     Pointer events handle both mouse and touch uniformly.
-        const findDpadBtn = (target) =>
-          target instanceof Element ? target.closest('[data-dpad]') : null;
-
-        const clearPressed = (btn) => {
-          if (btn && btn.classList.contains('is-pressed')) {
-            btn.classList.remove('is-pressed');
-          }
-        };
-
-        // pointerdown — start a press for any D-pad button
-        host.addEventListener('pointerdown', (ev) => {
-          const btn = findDpadBtn(ev.target);
-          if (!btn || !host.contains(btn)) return;
-          const action = btn.getAttribute('data-dpad');
-          if (action === 'mic') return; // mic is a click toggle, not a press
-          btn.classList.add('is-pressed');
-          // Capture the pointer so we reliably receive pointerup even
-          // if the user drags off the button (common on touch).
-          if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
-            try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
-          }
-        });
-
-        // pointerup / pointercancel — release the press
-        const releaseHandler = (ev) => {
-          const btn = findDpadBtn(ev.target);
-          if (!btn) return;
-          clearPressed(btn);
-        };
-        host.addEventListener('pointerup', releaseHandler);
-        host.addEventListener('pointercancel', releaseHandler);
-        host.addEventListener('pointerleave', (ev) => {
-          // Only clear if the pointer truly left the button (relatedTarget
-          // is outside the button) — this avoids flicker when moving
-          // between child elements within the same button.
-          const btn = findDpadBtn(ev.target);
-          if (!btn) return;
-          if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-          clearPressed(btn);
-        });
-
-        // click — toggle the mic button
-        host.addEventListener('click', (ev) => {
-          const btn = findDpadBtn(ev.target);
-          if (!btn || !host.contains(btn)) return;
-          if (btn.getAttribute('data-dpad') !== 'mic') return;
-          const isActive = btn.classList.toggle('is-active');
-          btn.setAttribute('aria-pressed', String(isActive));
-        });
-
-        // (3) Optional user-configured tap actions.
+        // (2) Optional user-configured tap actions.
         const cfg = this._controller.config || {};
         if (cfg.tap_action) {
           // Tap action is added at the host level so the user can tap
-          // anywhere on the card. We skip the nav arrow and D-pad
-          // buttons so taps on those go to the internal handlers.
+          // anywhere on the card. We skip the nav arrow buttons so
+          // a tap on the arrow navigates internally, not to the
+          // tap_action. (D-pad taps don't bubble here because the
+          // dpad-control lives in its own shadow root; the user's
+          // tap_action will only fire for taps on the card's own
+          // chrome outside the dpad.)
           host.addEventListener('click', (ev) => {
             const target = ev.target;
-            if (!(target instanceof Element)) return;
-            if (target.closest('[data-card-nav]')) return; // nav arrow
-            if (target.closest('[data-dpad]')) return;     // d-pad
+            if (target instanceof Element && target.closest('[data-card-nav]')) {
+              return; // nav arrow click — handled above
+            }
             this._controller.handleClick(this, ev);
           });
         }
