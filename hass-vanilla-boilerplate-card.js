@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.13';
+  const CARD_VERSION = '0.1.14';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -746,7 +746,10 @@
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     /* Plate gradient (no decorative overlay). */
-    background: radial-gradient(circle at top left, #202020 15%, #303030 100%);
+    /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
+    background-image: 
+      radial-gradient(circle 95% at top left, #202020 15%, #303030 100% 100%),
+      radial-gradient(circle 100% at top left, #fcfcfc 15%, #999999 100%);
     border: 1px solid #444;
     box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
