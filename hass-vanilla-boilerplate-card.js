@@ -1209,7 +1209,20 @@
     transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
   }
 
-  .${READOUT_CLEAR_CLASS}:hover,
+  /* Hover effect is scoped to devices with a real pointing
+     device (mouse, trackpad, stylus). On touch screens the
+     hover state would otherwise stick after a tap because the
+     finger remains over the button at the last tap location
+     until the user touches elsewhere. The focus-visible state
+     is left unscoped so keyboard users still get a visible
+     focus ring. */
+  @media (hover: hover) {
+    .${READOUT_CLEAR_CLASS}:hover {
+      color: var(--primary-text-color);
+      background: var(--divider-color, rgba(127, 127, 127, 0.12));
+      border-color: var(--divider-color, rgba(127, 127, 127, 0.35));
+    }
+  }
   .${READOUT_CLEAR_CLASS}:focus-visible {
     color: var(--primary-text-color);
     background: var(--divider-color, rgba(127, 127, 127, 0.12));
@@ -2167,9 +2180,22 @@
 
       try {
         const vm = this._controller.getViewModel();
-        host.innerHTML = buildCardHtml(vm);
-        // After every render, wire up the (optional) dpad → readout
-        // subscription so dpad button presses show up in the log.
+        const nextHtml = buildCardHtml(vm);
+
+        // CRITICAL: do NOT replace host.innerHTML on every hass
+        // update. Every hass change would recreate the
+        // <dpad-control> and <dpad-readout> elements, wiping the
+        // mic toggle state and the activity log. Instead, only
+        // re-render when the rendered HTML actually changes (e.g.
+        // when the view changes via router.navigate, or when the
+        // config updates).
+        if (host.innerHTML !== nextHtml) {
+          host.innerHTML = nextHtml;
+        }
+
+        // Re-wire dpad→readout whenever the elements are present.
+        // (This is cheap and idempotent; the wiring helper tracks
+        // whether the same instances are already connected.)
         this._wireDpadReadout(host);
       } catch (err) {
         // eslint-disable-next-line no-console

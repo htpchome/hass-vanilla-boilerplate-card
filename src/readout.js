@@ -120,7 +120,20 @@ const READOUT_STYLES = `
     transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
   }
 
-  .${READOUT_CLEAR_CLASS}:hover,
+  /* Hover effect is scoped to devices with a real pointing
+     device (mouse, trackpad, stylus). On touch screens the
+     hover state would otherwise stick after a tap because the
+     finger remains over the button at the last tap location
+     until the user touches elsewhere. The focus-visible state
+     is left unscoped so keyboard users still get a visible
+     focus ring. */
+  @media (hover: hover) {
+    .${READOUT_CLEAR_CLASS}:hover {
+      color: var(--primary-text-color);
+      background: var(--divider-color, rgba(127, 127, 127, 0.12));
+      border-color: var(--divider-color, rgba(127, 127, 127, 0.35));
+    }
+  }
   .${READOUT_CLEAR_CLASS}:focus-visible {
     color: var(--primary-text-color);
     background: var(--divider-color, rgba(127, 127, 127, 0.12));

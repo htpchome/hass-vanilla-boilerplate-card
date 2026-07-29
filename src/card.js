@@ -254,9 +254,22 @@ class HassVanillaBoilerplateCard extends HTMLElement {
 
     try {
       const vm = this._controller.getViewModel();
-      host.innerHTML = buildCardHtml(vm);
-      // After every render, wire up the (optional) dpad → readout
-      // subscription so dpad button presses show up in the log.
+      const nextHtml = buildCardHtml(vm);
+
+      // CRITICAL: do NOT replace host.innerHTML on every hass
+      // update. Every hass change would recreate the
+      // <dpad-control> and <dpad-readout> elements, wiping the
+      // mic toggle state and the activity log. Instead, only
+      // re-render when the rendered HTML actually changes (e.g.
+      // when the view changes via router.navigate, or when the
+      // config updates).
+      if (host.innerHTML !== nextHtml) {
+        host.innerHTML = nextHtml;
+      }
+
+      // Re-wire dpad→readout whenever the elements are present.
+      // (This is cheap and idempotent; the wiring helper tracks
+      // whether the same instances are already connected.)
       this._wireDpadReadout(host);
     } catch (err) {
       // eslint-disable-next-line no-console
