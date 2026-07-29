@@ -24,7 +24,13 @@ export default {
     file: 'hass-vanilla-boilerplate-card.js',
     format: 'iife',
     name: 'HassVanillaBoilerplateCard',
-    sourcemap: !isProd,
+    // 'hidden' (instead of true) generates the .map file but
+    // suppresses the //# sourceMappingURL=... comment at the
+    // bottom of the bundle. That way the browser's devtools
+    // doesn't try to fetch a sourcemap that HACS doesn't ship.
+    // Set NODE_ENV=production to disable sourcemap generation
+    // entirely (smaller bundle, no .map file at all).
+    sourcemap: !isProd ? 'hidden' : false,
     inlineDynamicImports: true,
   },
   plugins: [

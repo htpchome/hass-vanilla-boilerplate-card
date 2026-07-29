@@ -2435,4 +2435,3 @@
   });
 
 })();
-//# sourceMappingURL=hass-vanilla-boilerplate-card.js.map
