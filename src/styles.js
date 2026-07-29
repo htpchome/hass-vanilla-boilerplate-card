@@ -176,43 +176,6 @@ export const statusStyles = `
   }
 `;
 
-// Editor styles — mimic HA's editor chrome.
-export const editorStyles = `
-  :host {
-    display: block;
-    padding: 12px 0;
-  }
-
-  .editor-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 16px;
-  }
-
-  .editor-row label {
-    font-size: 0.875rem;
-    color: var(--secondary-text-color);
-    font-weight: 500;
-  }
-
-  .editor-row ha-input,
-  .editor-row ha-textarea {
-    width: 100%;
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-text-field-fill-color: var(--card-background-color);
-    --mdc-text-field-ink-color: var(--primary-text-color);
-    --mdc-text-field-label-ink-color: var(--secondary-text-color);
-  }
-
-  .editor-help {
-    margin-top: -8px;
-    margin-bottom: 16px;
-    font-size: 0.75rem;
-    color: var(--secondary-text-color);
-  }
-`;
-
 /**
  * Master style block injected into every card shadow root.
  * Exported as a single tagged-template-friendly array of strings so
@@ -224,5 +187,3 @@ export const allStyles = [
   navStyles,
   statusStyles,
 ].join('\n');
-
-export const allEditorStyles = [baseStyles, editorStyles, statusStyles].join('\n');

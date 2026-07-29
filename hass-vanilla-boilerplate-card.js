@@ -11,18 +11,11 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.25';
+  const CARD_VERSION = '0.1.26';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
     'A production-ready vanilla JS Home Assistant Lovelace card boilerplate.';
-
-  // ---------- Editor schema (used for getStubConfig + editor UI) ----------
-  const CONFIG_KEYS = Object.freeze({
-    TITLE: 'title',
-    SUBTITLE: 'subtitle',
-    CONTENT: 'content',
-  });
 
   // ---------- Defaults (used by setConfig + getStubConfig) ----------
   const DEFAULTS = Object.freeze({
@@ -191,16 +184,6 @@
     fireEvent(node, 'hass-action', { action, config });
   };
 
-  /**
-   * Convenience wrapper for the editor's `config-changed` event.
-   *
-   * @param {HTMLElement} node
-   * @param {object} config
-   */
-  const fireConfigChanged = (node, config) => {
-    fireEvent(node, 'config-changed', { config });
-  };
-
   // ----------------------------------------------------------------
   // Error boundaries / warnings
   // ----------------------------------------------------------------
@@ -246,25 +229,6 @@
       return false;
     }
     return true;
-  };
-
-  // ----------------------------------------------------------------
-  // Misc small utilities
-  // ----------------------------------------------------------------
-
-  /**
-   * Debounce — used by the editor to throttle config-changed events.
-   *
-   * @param {(...args: any[]) => void} fn
-   * @param {number} wait
-   * @returns {(...args: any[]) => void}
-   */
-  const debounce = (fn, wait = 150) => {
-    let timer = null;
-    return (...args) => {
-      if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), wait);
-    };
   };
 
   /**
@@ -1901,43 +1865,6 @@
   }
 `;
 
-  // Editor styles — mimic HA's editor chrome.
-  const editorStyles = `
-  :host {
-    display: block;
-    padding: 12px 0;
-  }
-
-  .editor-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 16px;
-  }
-
-  .editor-row label {
-    font-size: 0.875rem;
-    color: var(--secondary-text-color);
-    font-weight: 500;
-  }
-
-  .editor-row ha-input,
-  .editor-row ha-textarea {
-    width: 100%;
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-text-field-fill-color: var(--card-background-color);
-    --mdc-text-field-ink-color: var(--primary-text-color);
-    --mdc-text-field-label-ink-color: var(--secondary-text-color);
-  }
-
-  .editor-help {
-    margin-top: -8px;
-    margin-bottom: 16px;
-    font-size: 0.75rem;
-    color: var(--secondary-text-color);
-  }
-`;
-
   /**
    * Master style block injected into every card shadow root.
    * Exported as a single tagged-template-friendly array of strings so
@@ -1949,8 +1876,6 @@
     navStyles,
     statusStyles,
   ].join('\n');
-
-  const allEditorStyles = [baseStyles, editorStyles, statusStyles].join('\n');
 
   /**
    * card.js
@@ -2069,19 +1994,53 @@
     }
 
     /**
-     * Reference to the editor element. Lovelace calls this when
-     * the user opens the visual editor for our card.
+     * Schema-driven form definition for the card's visual editor.
      *
-     * @returns {Promise<HTMLElement>}
+     * Home Assistant calls this when the user opens the visual
+     * editor and renders an <ha-form> internally from the schema.
+     * This is the recommended modern pattern (see
+     * https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card).
+     *
+     * Why this and not a custom `getConfigElement()` editor:
+     *   - HA owns the form rendering and the resulting config
+     *     object, so `type: custom:hass-vanilla-boilerplate-card`
+     *     stays pinned to the top of the saved YAML.
+     *   - No hand-rolled <ha-input>/<ha-textarea> shadow DOM, so
+     *     the Content textbox is reliably present and editable.
+     *   - All field validation, helpers, and labels come from HA.
+     *
+     * @returns {{schema: Array, computeLabel?: Function, computeHelper?: Function, assertConfig?: Function}}
      */
-    static async getConfigElement() {
-      // Lazy import — the editor pulls in ha-form controls that
-      // are only needed inside the edit dialog.
-      await Promise.resolve().then(function () { return editor; });
-      const el = document.createElement('hass-vanilla-boilerplate-card-editor');
-      // Create the editor's shadow DOM and mount its form.
-      if (typeof el._init === 'function') el._init();
-      return el;
+    static getConfigForm() {
+      return {
+        schema: [
+          { name: 'title',    selector: { text: {} } },
+          { name: 'subtitle', selector: { text: {} } },
+          {
+            name: 'content',
+            selector: { text: { multiline: true } },
+          },
+        ],
+        computeLabel: (schema) => {
+          switch (schema.name) {
+            case 'title':    return 'Title';
+            case 'subtitle': return 'Subtitle';
+            case 'content':  return 'Content (HTML markup)';
+            default:         return undefined;
+          }
+        },
+        computeHelper: (schema) => {
+          if (schema.name === 'content') {
+            return 'Accepts HTML markup. The card renders it inside its ' +
+                   'shadow DOM, so your styles are isolated from the dashboard.';
+          }
+          return undefined;
+        },
+        assertConfig: (config) => {
+          // No hard requirements — all three fields are optional
+          // and fall back to DEFAULTS at render time.
+        },
+      };
     }
 
     // -----------------------------------------------------------
@@ -2273,165 +2232,5 @@
       `${CARD_NAME} registered.`,
     );
   }
-
-  /**
-   * editor.js
-   * ---------------------------------------------------------------
-   * Visual configuration element for <hass-vanilla-boilerplate-card>.
-   *
-   * Exposed as a custom element `hass-vanilla-boilerplate-card-editor`
-   * and surfaced to Home Assistant via the main card's static
-   * `getConfigElement()` method.
-   *
-   * Whenever a form input changes, the editor dispatches the native
-   * `config-changed` event with the new full config object. HA then
-   * re-renders the live dashboard preview using that new config.
-   * ---------------------------------------------------------------
-   */
-
-
-  class HassVanillaBoilerplateCardEditor extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: 'open' });
-      this._config = { ...DEFAULTS };
-      this._initialized = false;
-      this._emitConfigChanged = debounce(
-        this._emitConfigChanged.bind(this),
-        200,
-      );
-    }
-
-    // -----------------------------------------------------------
-    // Lifecycle
-    // -----------------------------------------------------------
-
-    connectedCallback() {
-      if (!this._initialized) this._init();
-    }
-
-    /**
-     * Public initialization hook — the main card calls this from
-     * its static `getConfigElement()` so the editor is ready to
-     * receive a `setConfig` call as soon as it's inserted.
-     */
-    _init() {
-      if (this._initialized) return;
-      this._initialized = true;
-
-      const root = this.shadowRoot;
-      if (!root) return;
-
-      // Inject styles.
-      const style = document.createElement('style');
-      style.setAttribute('data-editor-styles', '');
-      style.textContent = allEditorStyles;
-      root.appendChild(style);
-
-      // Build the form skeleton. We render once and then bind
-      // listeners — no innerHTML thrash on every input.
-      const form = document.createElement('div');
-      form.setAttribute('data-editor-form', '');
-      form.innerHTML = `
-      <div class="editor-row">
-        <label for="cfg-title">Title</label>
-        <ha-input id="cfg-title" name="title" label="Title"></ha-input>
-      </div>
-      <div class="editor-row">
-        <label for="cfg-subtitle">Subtitle</label>
-        <ha-input id="cfg-subtitle" name="subtitle" label="Subtitle"></ha-input>
-      </div>
-      <div class="editor-row">
-        <label for="cfg-content">Content (HTML markup)</label>
-        <ha-textarea id="cfg-content" name="content" label="Content" autogrow></ha-textarea>
-      </div>
-      <p class="editor-help">
-        The Content field accepts HTML markup. The card renders it inside its
-        shadow DOM, so your styles are isolated from the dashboard.
-      </p>
-    `;
-      root.appendChild(form);
-
-      // Wire up change handlers.
-      this._bindInput('cfg-title', 'title');
-      this._bindInput('cfg-subtitle', 'subtitle');
-      this._bindInput('cfg-content', 'content');
-
-      // Populate initial values (if any were set before insertion).
-      this._syncFromConfig();
-    }
-
-    // -----------------------------------------------------------
-    // Standard HA editor API
-    // -----------------------------------------------------------
-
-    /**
-     * Called by Home Assistant to push the current card config
-     * into the editor.
-     *
-     * @param {object} config
-     */
-    setConfig(config) {
-      this._config = { ...DEFAULTS, ...(config || {}) };
-      if (this._initialized) this._syncFromConfig();
-    }
-
-    // -----------------------------------------------------------
-    // Internal: input wiring
-    // -----------------------------------------------------------
-
-    /**
-     * Bind a `<ha-input>` or `<ha-textarea>` so its `value` updates
-     * `this._config[key]` and emits `config-changed` on every edit.
-     *
-     * @param {string} elementId
-     * @param {keyof typeof DEFAULTS} key
-     */
-    _bindInput(elementId, key) {
-      const el = this.shadowRoot && this.shadowRoot.getElementById(elementId);
-      if (!el) return;
-
-      // `input` event for ha-textarea / ha-input
-      el.addEventListener('input', (ev) => {
-        this._config = { ...this._config, [key]: ev.target.value };
-        this._emitConfigChanged();
-      });
-      // `change` as a final safety net
-      el.addEventListener('change', (ev) => {
-        this._config = { ...this._config, [key]: ev.target.value };
-        this._emitConfigChanged();
-      });
-    }
-
-    _syncFromConfig() {
-      const root = this.shadowRoot;
-      if (!root) return;
-      const titleEl = root.getElementById('cfg-title');
-      const subtitleEl = root.getElementById('cfg-subtitle');
-      const contentEl = root.getElementById('cfg-content');
-      if (titleEl) titleEl.value = this._config[CONFIG_KEYS.TITLE] || '';
-      if (subtitleEl) subtitleEl.value = this._config[CONFIG_KEYS.SUBTITLE] || '';
-      if (contentEl) contentEl.value = this._config[CONFIG_KEYS.CONTENT] || '';
-    }
-
-    _emitConfigChanged() {
-      fireConfigChanged(this, { ...this._config });
-    }
-  }
-
-  // -----------------------------------------------------------
-  // Registration
-  // -----------------------------------------------------------
-
-  if (!customElements.get('hass-vanilla-boilerplate-card-editor')) {
-    customElements.define(
-      'hass-vanilla-boilerplate-card-editor',
-      HassVanillaBoilerplateCardEditor,
-    );
-  }
-
-  var editor = /*#__PURE__*/Object.freeze({
-    __proto__: null
-  });
 
 })();

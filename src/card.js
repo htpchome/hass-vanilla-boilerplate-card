@@ -136,19 +136,53 @@ class HassVanillaBoilerplateCard extends HTMLElement {
   }
 
   /**
-   * Reference to the editor element. Lovelace calls this when
-   * the user opens the visual editor for our card.
+   * Schema-driven form definition for the card's visual editor.
    *
-   * @returns {Promise<HTMLElement>}
+   * Home Assistant calls this when the user opens the visual
+   * editor and renders an <ha-form> internally from the schema.
+   * This is the recommended modern pattern (see
+   * https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card).
+   *
+   * Why this and not a custom `getConfigElement()` editor:
+   *   - HA owns the form rendering and the resulting config
+   *     object, so `type: custom:hass-vanilla-boilerplate-card`
+   *     stays pinned to the top of the saved YAML.
+   *   - No hand-rolled <ha-input>/<ha-textarea> shadow DOM, so
+   *     the Content textbox is reliably present and editable.
+   *   - All field validation, helpers, and labels come from HA.
+   *
+   * @returns {{schema: Array, computeLabel?: Function, computeHelper?: Function, assertConfig?: Function}}
    */
-  static async getConfigElement() {
-    // Lazy import — the editor pulls in ha-form controls that
-    // are only needed inside the edit dialog.
-    const mod = await import('./editor.js');
-    const el = document.createElement('hass-vanilla-boilerplate-card-editor');
-    // Create the editor's shadow DOM and mount its form.
-    if (typeof el._init === 'function') el._init();
-    return el;
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: 'title',    selector: { text: {} } },
+        { name: 'subtitle', selector: { text: {} } },
+        {
+          name: 'content',
+          selector: { text: { multiline: true } },
+        },
+      ],
+      computeLabel: (schema) => {
+        switch (schema.name) {
+          case 'title':    return 'Title';
+          case 'subtitle': return 'Subtitle';
+          case 'content':  return 'Content (HTML markup)';
+          default:         return undefined;
+        }
+      },
+      computeHelper: (schema) => {
+        if (schema.name === 'content') {
+          return 'Accepts HTML markup. The card renders it inside its ' +
+                 'shadow DOM, so your styles are isolated from the dashboard.';
+        }
+        return undefined;
+      },
+      assertConfig: (config) => {
+        // No hard requirements — all three fields are optional
+        // and fall back to DEFAULTS at render time.
+      },
+    };
   }
 
   // -----------------------------------------------------------
