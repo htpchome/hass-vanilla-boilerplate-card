@@ -102,10 +102,10 @@ const DPAD_STYLES = `
     /* Plate gradient (no decorative overlay). */
     /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
     background-image: 
-      radial-gradient(circle 97% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
       radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
-    border: 1px solid var(--dpad-bg-1);
-    box-shadow: inset 0 0 12px var(--dpad-bg-1);
+    border: 1px solid #444;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
   }
 
@@ -165,8 +165,7 @@ const DPAD_STYLES = `
     margin: auto;
     /* The raised dark disc around the mic. */
     background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
-    border: 1px solid var(--dpad-bg-1);
-    box-shadow: inset 0 0 12px var(--dpad-bg-1);
+    border: 1px solid rgba(0, 0, 0, 0.5);
     border-radius: 50%;
     color: var(--dpad-text-2);
   }
