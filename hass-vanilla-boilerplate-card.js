@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.40";
+  const CARD_VERSION = "0.1.41";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1836,7 +1836,6 @@
     }
   }
 
-  .slice-button:active path,
   .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary);
   }
@@ -1846,7 +1845,6 @@
     transition: stroke 0.15s ease;
   }
 
-  .slice-button:active .slice-chevron,
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }

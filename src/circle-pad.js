@@ -121,7 +121,6 @@ const CIRCLE_PAD_STYLES = `
     }
   }
 
-  .slice-button:active path,
   .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary);
   }
@@ -131,7 +130,6 @@ const CIRCLE_PAD_STYLES = `
     transition: stroke 0.15s ease;
   }
 
-  .slice-button:active .slice-chevron,
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }
