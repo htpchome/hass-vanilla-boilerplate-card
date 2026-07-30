@@ -158,4 +158,4 @@ vite.config.ts.timestamp-*
 !.github/
 dpad.html.bak
 dpad.proto.html
-circle-svg-dpad.html
+circle-pad.html
