@@ -16,26 +16,11 @@
 
 import { LAYOUTS } from './constants.js';
 
-/**
- * Thin pub/sub used by the card to re-render on view change.
- * Returns an `unsubscribe()` function.
- *
- * @param {string} event
- * @param {(payload:any) => void} fn
- */
-const subscribe = (event, fn) => {
-  document.addEventListener(event, (e) => fn(e.detail));
-  return () => document.removeEventListener(event, fn);
-};
-
-const emit = (event, detail) => {
-  document.dispatchEvent(new CustomEvent(event, { detail }));
-};
-
 export class Router {
   constructor(initial = LAYOUTS.MAIN) {
     this._current = initial;
     this._history = [initial];
+    this._listeners = new Set();
   }
 
   /** Current view identifier. */
@@ -67,7 +52,7 @@ export class Router {
     this._current = id;
     this._history.push(id);
     if (this._history.length > 20) this._history.shift();
-    emit('card-view-changed', { view: id, payload });
+    this._notify({ view: id, payload });
     return true;
   }
 
@@ -80,19 +65,33 @@ export class Router {
     this._history.pop(); // remove current
     const previous = this._history[this._history.length - 1];
     this._current = previous;
-    emit('card-view-changed', { view: previous, payload: null });
+    this._notify({ view: previous, payload: null });
     return true;
   }
 
   /**
-   * Subscribe to view-change events.
+   * Register a listener for router view changes.
    * @param {(payload:any) => void} fn
    * @returns {() => void} unsubscribe
    */
   onViewChange(fn) {
-    return subscribe('card-view-changed', fn);
+    if (typeof fn !== 'function') return () => {};
+    this._listeners.add(fn);
+    return () => this._listeners.delete(fn);
+  }
+
+  /**
+   * Notify all listeners of the latest view state.
+   * @param {object} detail
+   */
+  _notify(detail) {
+    this._listeners.forEach((fn) => {
+      try {
+        fn(detail);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[router] listener threw', err);
+      }
+    });
   }
 }
-
-// Singleton — the card and controller share one router instance.
-export const router = new Router(LAYOUTS.MAIN);

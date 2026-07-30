@@ -10,7 +10,7 @@
  *
  * Internally it owns:
  *   - a CardController     (logic)
- *   - a Router             (view state, via the singleton)
+ *   - a Router             (view state, per card instance)
  *   - a Factory            (HTML rendering)
  *
  * It also registers itself on `window.customCards` so it appears
@@ -37,7 +37,7 @@ import {
   renderErrorMessage,
   warnOnce,
 } from './helpers.js';
-import { router } from './router.js';
+import { Router } from './router.js';
 import { allStyles } from './styles.js';
 
 class HassVanillaBoilerplateCard extends HTMLElement {
@@ -48,7 +48,8 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
 
     // 2. Controller (logic) and a render-scheduler reference.
-    this._controller = new CardController();
+    this._router = new Router();
+    this._controller = new CardController(this._router);
     this._renderScheduled = false;
     this._unsubRouter = null;
     this._unsubController = null;
@@ -61,7 +62,7 @@ class HassVanillaBoilerplateCard extends HTMLElement {
   connectedCallback() {
     this._mount();
     this._unsubController = this._controller.subscribe(() => this._scheduleRender());
-    this._unsubRouter = router.onViewChange(() => this._scheduleRender());
+    this._unsubRouter = this._router.onViewChange(() => this._scheduleRender());
     this._scheduleRender();
   }
 
@@ -210,7 +211,7 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     //
     // Two kinds of listeners may be attached:
     //   1. Internal header-nav arrow clicks (always wired up).
-    //      These route through `router.navigate()` and never
+    //      These route through this card instance's router and never
     //      dispatch hass-action events. The D-pad is also
     //      fully self-contained (see dpad.js) — it dispatches its
     //      own `dpad-press` / `dpad-release` / `dpad-toggle`
@@ -234,7 +235,7 @@ class HassVanillaBoilerplateCard extends HTMLElement {
         const btn = target.closest('[data-card-nav]');
         if (!btn || !host.contains(btn)) return;
         const view = btn.getAttribute('data-card-nav');
-        if (view) router.navigate(view);
+        if (view) this._router.navigate(view);
       });
 
       // (2) Optional user-configured tap actions.
@@ -295,7 +296,8 @@ class HassVanillaBoilerplateCard extends HTMLElement {
       // <dpad-control> and <dpad-readout> elements, wiping the
       // mic toggle state and the activity log. Instead, only
       // re-render when the rendered HTML actually changes (e.g.
-      // when the view changes via router.navigate, or when the
+      // when the view changes via this card instance's router,
+      // or when the
       // config updates).
       if (host.innerHTML !== nextHtml) {
         host.innerHTML = nextHtml;

@@ -26,13 +26,14 @@ import {
   mergeDefaults,
   warnOnce,
 } from './helpers.js';
-import { router } from './router.js';
+import { Router } from './router.js';
 
 /**
  * Controller — pure logic, no DOM. Created per-card-instance.
  */
 export class CardController {
-  constructor() {
+  constructor(router = new Router()) {
+    this._router = router;
     this._config = mergeDefaults(null);
     this._hass = null;
     this._listeners = new Set();
@@ -78,7 +79,7 @@ export class CardController {
 
   /** Currently active view id (delegated to router). */
   get currentView() {
-    return router.current;
+    return this._router.current;
   }
 
   /** Card version string, for the footer. */
