@@ -156,3 +156,4 @@ vite.config.ts.timestamp-*
 *.map
 !.vscode/
 !.github/
+dpad.html.bak
