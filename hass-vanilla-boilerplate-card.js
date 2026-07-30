@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.32";
+  const CARD_VERSION = "0.1.33";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1083,11 +1083,11 @@
    * Reusable D-pad touchpad custom element: <dpad-8way-control>
    *
    * Drop this element into any HTML (or shadow root) and it will
-   * render a 5-button circular touchpad:
+   * render an 8-way circular touchpad with center mic:
    *
-   *        [ ▲ ]
-   *  [ ◄ ]  [ 🎙 ]  [ ► ]
-   *        [ ▼ ]
+   *   [ ↖ ] [ ▲ ] [ ↗ ]
+   *   [ ◄ ] [ 🎙 ] [ ► ]
+   *   [ ↙ ] [ ▼ ] [ ↘ ]
    *
    * (Currently a 1:1 clone of dpad.js with renamed internals so
    * the two dpad elements can coexist on the same page without
@@ -1119,11 +1119,19 @@
   const DPAD_8WAY_BTN_DOWN = "dpad-8way__btn--down";
   const DPAD_8WAY_BTN_LEFT = "dpad-8way__btn--left";
   const DPAD_8WAY_BTN_RIGHT = "dpad-8way__btn--right";
+  const DPAD_8WAY_BTN_UP_LEFT = "dpad-8way__btn--up-left";
+  const DPAD_8WAY_BTN_UP_RIGHT = "dpad-8way__btn--up-right";
+  const DPAD_8WAY_BTN_DOWN_LEFT = "dpad-8way__btn--down-left";
+  const DPAD_8WAY_BTN_DOWN_RIGHT = "dpad-8way__btn--down-right";
   const DPAD_8WAY_BTN_MIC = "dpad-8way__btn--mic";
   const DPAD_8WAY_DATA_ACTION = "data-dpad-8way-action";
   const DPAD_8WAY_ACTIONS = Object.freeze({
     UP: "up",
+    UP_LEFT: "up-left",
+    UP_RIGHT: "up-right",
     DOWN: "down",
+    DOWN_LEFT: "down-left",
+    DOWN_RIGHT: "down-right",
     LEFT: "left",
     RIGHT: "right",
     MIC: "mic",
@@ -1143,6 +1151,7 @@
     DPAD_DOWN: "mdi:chevron-down",
     DPAD_LEFT: "mdi:chevron-left",
     DPAD_RIGHT: "mdi:chevron-right",
+    DPAD_DIAGONAL: "mdi:chevron-up",
     MICROPHONE: "mdi:microphone",
     MICROPHONE_OFF: "mdi:microphone-off",
   });
@@ -1175,6 +1184,7 @@
     display: block;
     --dpad-size: 220px;
     --dpad-arrow-icon-size: 42px;   /* 150% larger than original 28px */
+    --dpad-arrow-diag-icon-size: 24px;
     --dpad-mic-size: 96px;          /* 150% larger than original 64px */
     --dpad-mic-icon-size: 54px;     /* 150% larger than original 36px */
     --dpad-bg-1: var(--secondary-background-color);
@@ -1251,7 +1261,31 @@
   }
 
   .${DPAD_8WAY_BTN_UP}    { grid-area: 1 / 2; }
+  .${DPAD_8WAY_BTN_UP_LEFT} {
+    grid-area: 1 / 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+  }
+  .${DPAD_8WAY_BTN_UP_RIGHT} {
+    grid-area: 1 / 3;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+  }
   .${DPAD_8WAY_BTN_DOWN}  { grid-area: 3 / 2; }
+  .${DPAD_8WAY_BTN_DOWN_LEFT} {
+    grid-area: 3 / 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+  .${DPAD_8WAY_BTN_DOWN_RIGHT} {
+    grid-area: 3 / 3;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
   .${DPAD_8WAY_BTN_LEFT}  { grid-area: 2 / 1; }
   .${DPAD_8WAY_BTN_RIGHT} { grid-area: 2 / 3; }
   .${DPAD_8WAY_BTN_MIC}   {
@@ -1271,6 +1305,18 @@
   .${DPAD_8WAY_BTN_MIC} ha-icon {
     --mdc-icon-size: var(--dpad-mic-icon-size);
   }
+
+  .${DPAD_8WAY_BTN_UP_LEFT} ha-icon,
+  .${DPAD_8WAY_BTN_UP_RIGHT} ha-icon,
+  .${DPAD_8WAY_BTN_DOWN_LEFT} ha-icon,
+  .${DPAD_8WAY_BTN_DOWN_RIGHT} ha-icon {
+    --mdc-icon-size: var(--dpad-arrow-diag-icon-size);
+  }
+
+  .${DPAD_8WAY_BTN_UP_LEFT} ha-icon { transform: rotate(-45deg); }
+  .${DPAD_8WAY_BTN_UP_RIGHT} ha-icon { transform: rotate(45deg); }
+  .${DPAD_8WAY_BTN_DOWN_LEFT} ha-icon { transform: rotate(-135deg); }
+  .${DPAD_8WAY_BTN_DOWN_RIGHT} ha-icon { transform: rotate(135deg); }
 
   /* Momentary pressed state for arrow buttons — just brighten
      the icon, no background change (the plate is the background). */
@@ -1341,12 +1387,36 @@
    * @returns {string} raw HTML
    */
   const buildDpadHtml = () => {
+    const upLeft = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.UP_LEFT,
+      DPAD_8WAY_BTN_UP_LEFT,
+      "DPAD_DIAGONAL",
+      "Up-left",
+    );
     const up = buildButtonHtml(DPAD_8WAY_ACTIONS.UP, DPAD_8WAY_BTN_UP, "DPAD_UP", "Up");
+    const upRight = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.UP_RIGHT,
+      DPAD_8WAY_BTN_UP_RIGHT,
+      "DPAD_DIAGONAL",
+      "Up-right",
+    );
     const down = buildButtonHtml(
       DPAD_8WAY_ACTIONS.DOWN,
       DPAD_8WAY_BTN_DOWN,
       "DPAD_DOWN",
       "Down",
+    );
+    const downLeft = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.DOWN_LEFT,
+      DPAD_8WAY_BTN_DOWN_LEFT,
+      "DPAD_DIAGONAL",
+      "Down-left",
+    );
+    const downRight = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.DOWN_RIGHT,
+      DPAD_8WAY_BTN_DOWN_RIGHT,
+      "DPAD_DIAGONAL",
+      "Down-right",
     );
     const left = buildButtonHtml(
       DPAD_8WAY_ACTIONS.LEFT,
@@ -1384,11 +1454,15 @@
       '<div class="' +
       DPAD_8WAY_CLASS +
       '" role="group" aria-label="D-pad control">' +
+      upLeft +
       up +
+      upRight +
       left +
       mic +
       right +
+      downLeft +
       down +
+      downRight +
       "</div>"
     );
   };
@@ -1406,6 +1480,12 @@
    *   - addEventListener('dpad-8way-press',   fn) { action, originalEvent }
    *   - addEventListener('dpad-8way-release', fn) { action, originalEvent }
    *   - addEventListener('dpad-8way-toggle',  fn) { action, active, originalEvent }
+   *
+   * Press/release actions:
+   *   up, up-right, right, down-right, down, down-left, left, up-left
+   *
+   * Toggle actions:
+   *   mic
    *
    * All events bubble and are composed, so they cross shadow
    * boundaries. Consumers in any shadow root can listen to them.
