@@ -11,35 +11,35 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.30';
-  const CARD_TYPE = 'hass-vanilla-boilerplate-card';
-  const CARD_NAME = 'HASS Vanilla Boilerplate Card';
+  const CARD_VERSION = "0.1.31";
+  const CARD_TYPE = "hass-vanilla-boilerplate-card";
+  const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
-    'A production-ready vanilla JS Home Assistant Lovelace card boilerplate.';
+    "A production-ready vanilla JS Home Assistant Lovelace card boilerplate.";
 
   // ---------- Defaults (used by setConfig + getStubConfig) ----------
   const DEFAULTS = Object.freeze({
-    title: 'Vanilla Boilerplate',
-    subtitle: 'A modular Home Assistant card',
-    content: '<p>Hello, <strong>Home Assistant</strong>!</p>',
+    title: "Vanilla Boilerplate",
+    subtitle: "A modular Home Assistant card",
+    content: "<p>Hello, <strong>Home Assistant</strong>!</p>",
   });
 
   // ---------- Layout / view identifiers (used by router.js) ----------
   const LAYOUTS = Object.freeze({
-    MAIN: 'main',
+    MAIN: "main",
     // Reserved for future tabs/views added via router.js
-    DETAIL: 'detail',
-    SETTINGS: 'settings',
+    DETAIL: "detail",
+    SETTINGS: "settings",
   });
 
   // ---------- Selector regions in the card DOM ----------
   const REGIONS = Object.freeze({
-    CARD_WRAPPER: 'card-wrapper',
-    HEADER: 'card-header',
-    TITLE: 'card-title',
-    SUBTITLE: 'card-subtitle',
-    CONTENT: 'card-content',
-    FOOTER: 'card-footer',
+    CARD_WRAPPER: "card-wrapper",
+    HEADER: "card-header",
+    TITLE: "card-title",
+    SUBTITLE: "card-subtitle",
+    CONTENT: "card-content",
+    FOOTER: "card-footer",
   });
 
   // ---------- CSS class names (mirror of REGIONS where needed) ----------
@@ -49,9 +49,9 @@
 
   // ---------- Safety / error message keys ----------
   const ERROR_KEYS = Object.freeze({
-    MISSING_CONFIG: 'missing_config',
-    INVALID_CONFIG: 'invalid_config',
-    MISSING_HASS: 'missing_hass',
+    MISSING_CONFIG: "missing_config",
+    INVALID_CONFIG: "invalid_config",
+    MISSING_HASS: "missing_hass",
   });
 
   /**
@@ -248,26 +248,11 @@
    */
 
 
-  /**
-   * Thin pub/sub used by the card to re-render on view change.
-   * Returns an `unsubscribe()` function.
-   *
-   * @param {string} event
-   * @param {(payload:any) => void} fn
-   */
-  const subscribe = (event, fn) => {
-    document.addEventListener(event, (e) => fn(e.detail));
-    return () => document.removeEventListener(event, fn);
-  };
-
-  const emit = (event, detail) => {
-    document.dispatchEvent(new CustomEvent(event, { detail }));
-  };
-
   class Router {
     constructor(initial = LAYOUTS.MAIN) {
       this._current = initial;
       this._history = [initial];
+      this._listeners = new Set();
     }
 
     /** Current view identifier. */
@@ -299,7 +284,7 @@
       this._current = id;
       this._history.push(id);
       if (this._history.length > 20) this._history.shift();
-      emit('card-view-changed', { view: id, payload });
+      this._notify({ view: id, payload });
       return true;
     }
 
@@ -312,22 +297,36 @@
       this._history.pop(); // remove current
       const previous = this._history[this._history.length - 1];
       this._current = previous;
-      emit('card-view-changed', { view: previous, payload: null });
+      this._notify({ view: previous, payload: null });
       return true;
     }
 
     /**
-     * Subscribe to view-change events.
+     * Register a listener for router view changes.
      * @param {(payload:any) => void} fn
      * @returns {() => void} unsubscribe
      */
     onViewChange(fn) {
-      return subscribe('card-view-changed', fn);
+      if (typeof fn !== "function") return () => {};
+      this._listeners.add(fn);
+      return () => this._listeners.delete(fn);
+    }
+
+    /**
+     * Notify all listeners of the latest view state.
+     * @param {object} detail
+     */
+    _notify(detail) {
+      this._listeners.forEach((fn) => {
+        try {
+          fn(detail);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("[router] listener threw", err);
+        }
+      });
     }
   }
-
-  // Singleton — the card and controller share one router instance.
-  const router = new Router(LAYOUTS.MAIN);
 
   /**
    * controller.js
@@ -347,7 +346,8 @@
    * Controller — pure logic, no DOM. Created per-card-instance.
    */
   class CardController {
-    constructor() {
+    constructor(router = new Router()) {
+      this._router = router;
       this._config = mergeDefaults(null);
       this._hass = null;
       this._listeners = new Set();
@@ -374,7 +374,7 @@
           fn();
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('[controller] listener threw', err);
+          console.error("[controller] listener threw", err);
         }
       });
     }
@@ -393,7 +393,7 @@
 
     /** Currently active view id (delegated to router). */
     get currentView() {
-      return router.current;
+      return this._router.current;
     }
 
     /** Card version string, for the footer. */
@@ -429,8 +429,8 @@
      * @param {{states: Record<string, any>}} hass
      */
     setHass(hass) {
-      if (!hass || typeof hass !== 'object') {
-        warnOnce(ERROR_KEYS.MISSING_HASS, 'No hass object provided to card');
+      if (!hass || typeof hass !== "object") {
+        warnOnce(ERROR_KEYS.MISSING_HASS, "No hass object provided to card");
         return;
       }
       this._hass = hass;
@@ -472,30 +472,30 @@
       if (!this._config.tap_action) return;
       // Pass the user's `tap_action` config (e.g.
       // { action: 'navigate', navigation_path: '/lovelace/0' }).
-      fireHassAction(node, 'tap', this._config.tap_action);
+      fireHassAction(node, "tap", this._config.tap_action);
     }
 
-      /**
-       * Default hold handler.
-       *
-       * @param {HTMLElement} node
-       * @param {MouseEvent} ev
-       */
-      handleHold(node, ev) {
-        if (!this._config.hold_action) return;
-        fireHassAction(node, 'hold', this._config.hold_action);
-      }
+    /**
+     * Default hold handler.
+     *
+     * @param {HTMLElement} node
+     * @param {MouseEvent} ev
+     */
+    handleHold(node, ev) {
+      if (!this._config.hold_action) return;
+      fireHassAction(node, "hold", this._config.hold_action);
+    }
 
-      /**
-       * Default double-tap handler.
-       *
-       * @param {HTMLElement} node
-       * @param {MouseEvent} ev
-       */
-      handleDoubleClick(node, ev) {
-        if (!this._config.double_tap_action) return;
-        fireHassAction(node, 'double_tap', this._config.double_tap_action);
-      }
+    /**
+     * Default double-tap handler.
+     *
+     * @param {HTMLElement} node
+     * @param {MouseEvent} ev
+     */
+    handleDoubleClick(node, ev) {
+      if (!this._config.double_tap_action) return;
+      fireHassAction(node, "double_tap", this._config.double_tap_action);
+    }
 
     /**
      * Convenience: safely read a state value from hass, returning
@@ -565,43 +565,43 @@
   // Internal class hooks & data attributes (kept private to the module)
   // ----------------------------------------------------------------
 
-  const DPAD_CLASS = 'dpad';
-  const DPAD_BTN_CLASS = 'dpad__btn';
-  const DPAD_BTN_UP = 'dpad__btn--up';
-  const DPAD_BTN_DOWN = 'dpad__btn--down';
-  const DPAD_BTN_LEFT = 'dpad__btn--left';
-  const DPAD_BTN_RIGHT = 'dpad__btn--right';
-  const DPAD_BTN_MIC = 'dpad__btn--mic';
-  const DPAD_DATA_ACTION = 'data-dpad-action';
+  const DPAD_CLASS = "dpad";
+  const DPAD_BTN_CLASS = "dpad__btn";
+  const DPAD_BTN_UP = "dpad__btn--up";
+  const DPAD_BTN_DOWN = "dpad__btn--down";
+  const DPAD_BTN_LEFT = "dpad__btn--left";
+  const DPAD_BTN_RIGHT = "dpad__btn--right";
+  const DPAD_BTN_MIC = "dpad__btn--mic";
+  const DPAD_DATA_ACTION = "data-dpad-action";
   const DPAD_ACTIONS = Object.freeze({
-    UP: 'up',
-    DOWN: 'down',
-    LEFT: 'left',
-    RIGHT: 'right',
-    MIC: 'mic',
+    UP: "up",
+    DOWN: "down",
+    LEFT: "left",
+    RIGHT: "right",
+    MIC: "mic",
   });
 
   // Custom events dispatched on the host element.
-  const EVT_PRESS = 'dpad-press';
-  const EVT_RELEASE = 'dpad-release';
-  const EVT_TOGGLE = 'dpad-toggle';
+  const EVT_PRESS = "dpad-press";
+  const EVT_RELEASE = "dpad-release";
+  const EVT_TOGGLE = "dpad-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
   const DPAD_ICON_NAMES = Object.freeze({
-    DPAD_UP: 'mdi:chevron-up',
-    DPAD_DOWN: 'mdi:chevron-down',
-    DPAD_LEFT: 'mdi:chevron-left',
-    DPAD_RIGHT: 'mdi:chevron-right',
-    MICROPHONE: 'mdi:microphone',
-    MICROPHONE_OFF: 'mdi:microphone-off',
+    DPAD_UP: "mdi:chevron-up",
+    DPAD_DOWN: "mdi:chevron-down",
+    DPAD_LEFT: "mdi:chevron-left",
+    DPAD_RIGHT: "mdi:chevron-right",
+    MICROPHONE: "mdi:microphone",
+    MICROPHONE_OFF: "mdi:microphone-off",
   });
 
   const renderDpadIcon = (key, opts = {}) => {
     const name = DPAD_ICON_NAMES[key];
-    if (!name) return '';
-    const cls = opts.className ? ' class="' + opts.className + '"' : '';
-    return '<ha-icon icon="' + name + '"' + cls + '></ha-icon>';
+    if (!name) return "";
+    const cls = opts.className ? ' class="' + opts.className + '"' : "";
+    return '<ha-icon icon="' + name + '"' + cls + "></ha-icon>";
   };
 
   // ----------------------------------------------------------------
@@ -759,21 +759,30 @@
    */
   const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
     let inner = renderDpadIcon(iconKey, {
-      className: DPAD_BTN_CLASS + '__icon dpad__icon--default',
+      className: DPAD_BTN_CLASS + "__icon dpad__icon--default",
     });
     if (activeIconKey) {
       inner += renderDpadIcon(activeIconKey, {
-        className: DPAD_BTN_CLASS + '__icon dpad__icon--active',
+        className: DPAD_BTN_CLASS + "__icon dpad__icon--active",
       });
     }
     return (
       '<button type="button" ' +
-        'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
-        DPAD_DATA_ACTION + '="' + action + '" ' +
-        'aria-label="' + label + '" ' +
-        'aria-pressed="false">' +
-        inner +
-      '</button>'
+      'class="' +
+      DPAD_BTN_CLASS +
+      " " +
+      extraClass +
+      '" ' +
+      DPAD_DATA_ACTION +
+      '="' +
+      action +
+      '" ' +
+      'aria-label="' +
+      label +
+      '" ' +
+      'aria-pressed="false">' +
+      inner +
+      "</button>"
     );
   };
 
@@ -782,10 +791,25 @@
    * @returns {string} raw HTML
    */
   const buildDpadHtml = () => {
-    const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
-    const down = buildButtonHtml(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
-    const left = buildButtonHtml(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
-    const right = buildButtonHtml(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+    const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
+    const down = buildButtonHtml(
+      DPAD_ACTIONS.DOWN,
+      DPAD_BTN_DOWN,
+      "DPAD_DOWN",
+      "Down",
+    );
+    const left = buildButtonHtml(
+      DPAD_ACTIONS.LEFT,
+      DPAD_BTN_LEFT,
+      "DPAD_LEFT",
+      "Left",
+    );
+    const right = buildButtonHtml(
+      DPAD_ACTIONS.RIGHT,
+      DPAD_BTN_RIGHT,
+      "DPAD_RIGHT",
+      "Right",
+    );
     // Mic button icon swap:
     //   - default (off): show mdi:microphone-off
     //   - active  (on):  show mdi:microphone (recording in progress)
@@ -793,9 +817,9 @@
     const mic = buildButtonHtml(
       DPAD_ACTIONS.MIC,
       DPAD_BTN_MIC,
-      'MICROPHONE_OFF',
-      'Toggle microphone',
-      'MICROPHONE',
+      "MICROPHONE_OFF",
+      "Toggle microphone",
+      "MICROPHONE",
     );
     // Each button is a direct grid child. The grid is 3x3 and each
     // button uses its own `grid-area` to position itself:
@@ -807,9 +831,15 @@
     // No slot wrappers \u2014 putting multiple buttons in one grid cell
     // would cause them to overlap (the bug we just fixed).
     return (
-      '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
-        up + left + mic + right + down +
-      '</div>'
+      '<div class="' +
+      DPAD_CLASS +
+      '" role="group" aria-label="D-pad control">' +
+      up +
+      left +
+      mic +
+      right +
+      down +
+      "</div>"
     );
   };
 
@@ -833,7 +863,7 @@
   class DpadControl extends HTMLElement {
     constructor() {
       super();
-      this.attachShadow({ mode: 'open' });
+      this.attachShadow({ mode: "open" });
       // State: which buttons are currently pressed / active.
       this._pressed = new Set();
       this._pressedByPointer = new Map();
@@ -906,10 +936,10 @@
       if (this._mounted) return;
       this._mounted = true;
 
-      const style = document.createElement('style');
+      const style = document.createElement("style");
       style.textContent = DPAD_STYLES;
 
-      const host = document.createElement('div');
+      const host = document.createElement("div");
       host.innerHTML = buildDpadHtml();
 
       this.shadowRoot.appendChild(style);
@@ -921,18 +951,21 @@
       if (!root) return;
 
       const findBtn = (target) =>
-        target instanceof Element ? target.closest('[' + DPAD_DATA_ACTION + ']') : null;
+        target instanceof Element
+          ? target.closest("[" + DPAD_DATA_ACTION + "]")
+          : null;
 
       const clearPressed = (btn) => {
         if (!btn) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         this._pressed.delete(action);
-        btn.classList.remove('is-pressed');
+        btn.classList.remove("is-pressed");
       };
 
       const releaseByPointer = (ev) => {
-        if (!ev || ev.pointerId === null || ev.pointerId === undefined) return false;
+        if (!ev || ev.pointerId === null || ev.pointerId === undefined)
+          return false;
         const state = this._pressedByPointer.get(ev.pointerId);
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
@@ -942,7 +975,7 @@
       };
 
       // pointerdown: start a press for any D-pad button
-      root.addEventListener('pointerdown', (ev) => {
+      root.addEventListener("pointerdown", (ev) => {
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
@@ -951,12 +984,19 @@
         if (ev.pointerId !== null && ev.pointerId !== undefined) {
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
-        btn.classList.add('is-pressed');
+        btn.classList.add("is-pressed");
         this._dispatch(EVT_PRESS, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
-        if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
-          try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+        if (
+          typeof btn.setPointerCapture === "function" &&
+          ev.pointerId !== null
+        ) {
+          try {
+            btn.setPointerCapture(ev.pointerId);
+          } catch (_e) {
+            /* ignore */
+          }
         }
       });
 
@@ -970,11 +1010,11 @@
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
       };
-      root.addEventListener('pointerup', release);
-      root.addEventListener('pointercancel', release);
+      root.addEventListener("pointerup", release);
+      root.addEventListener("pointercancel", release);
 
       // pointerleave: clear if the pointer truly leaves the button
-      root.addEventListener('pointerleave', (ev) => {
+      root.addEventListener("pointerleave", (ev) => {
         if (releaseByPointer(ev)) return;
         const btn = findBtn(ev.target);
         if (!btn) return;
@@ -985,7 +1025,7 @@
       });
 
       // click: toggle the mic button
-      root.addEventListener('click', (ev) => {
+      root.addEventListener("click", (ev) => {
         const btn = findBtn(ev.target);
         if (!btn) return;
         if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
@@ -1001,10 +1041,10 @@
     _applyMicState() {
       const root = this.shadowRoot;
       if (!root) return;
-      const mic = root.querySelector('.' + DPAD_BTN_MIC);
+      const mic = root.querySelector("." + DPAD_BTN_MIC);
       if (!mic) return;
-      mic.classList.toggle('is-active', this._activeMic);
-      mic.setAttribute('aria-pressed', String(this._activeMic));
+      mic.classList.toggle("is-active", this._activeMic);
+      mic.setAttribute("aria-pressed", String(this._activeMic));
     }
 
     /**
@@ -1028,8 +1068,11 @@
 
   // Register the custom element. Guard against double-registration
   // (e.g. if this module is imported more than once).
-  if (typeof customElements !== 'undefined' && !customElements.get('dpad-control')) {
-    customElements.define('dpad-control', DpadControl);
+  if (
+    typeof customElements !== "undefined" &&
+    !customElements.get("dpad-control")
+  ) {
+    customElements.define("dpad-control", DpadControl);
   }
 
   /**
@@ -1968,7 +2011,7 @@
    *
    * Internally it owns:
    *   - a CardController     (logic)
-   *   - a Router             (view state, via the singleton)
+   *   - a Router             (view state, per card instance)
    *   - a Factory            (HTML rendering)
    *
    * It also registers itself on `window.customCards` so it appears
@@ -1982,10 +2025,11 @@
       super();
 
       // 1. Shadow DOM (required for style isolation).
-      this.attachShadow({ mode: 'open' });
+      this.attachShadow({ mode: "open" });
 
       // 2. Controller (logic) and a render-scheduler reference.
-      this._controller = new CardController();
+      this._router = new Router();
+      this._controller = new CardController(this._router);
       this._renderScheduled = false;
       this._unsubRouter = null;
       this._unsubController = null;
@@ -1997,8 +2041,10 @@
 
     connectedCallback() {
       this._mount();
-      this._unsubController = this._controller.subscribe(() => this._scheduleRender());
-      this._unsubRouter = router.onViewChange(() => this._scheduleRender());
+      this._unsubController = this._controller.subscribe(() =>
+        this._scheduleRender(),
+      );
+      this._unsubRouter = this._router.onViewChange(() => this._scheduleRender());
       this._scheduleRender();
     }
 
@@ -2055,7 +2101,10 @@
      */
     async getPreviewCard() {
       // Ensure a default config is loaded before rendering.
-      if (!this._controller.config || Object.keys(this._controller.config).length === 0) {
+      if (
+        !this._controller.config ||
+        Object.keys(this._controller.config).length === 0
+      ) {
         this._controller.setConfig({ ...DEFAULTS });
       }
       // Re-render synchronously.
@@ -2093,25 +2142,31 @@
     static getConfigForm() {
       return {
         schema: [
-          { name: 'title',    selector: { text: {} } },
-          { name: 'subtitle', selector: { text: {} } },
+          { name: "title", selector: { text: {} } },
+          { name: "subtitle", selector: { text: {} } },
           {
-            name: 'content',
+            name: "content",
             selector: { text: { multiline: true } },
           },
         ],
         computeLabel: (schema) => {
           switch (schema.name) {
-            case 'title':    return 'Title';
-            case 'subtitle': return 'Subtitle';
-            case 'content':  return 'Content (HTML markup)';
-            default:         return undefined;
+            case "title":
+              return "Title";
+            case "subtitle":
+              return "Subtitle";
+            case "content":
+              return "Content (HTML markup)";
+            default:
+              return undefined;
           }
         },
         computeHelper: (schema) => {
-          if (schema.name === 'content') {
-            return 'Accepts HTML markup. The card renders it inside its ' +
-                   'shadow DOM, so your styles are isolated from the dashboard.';
+          if (schema.name === "content") {
+            return (
+              "Accepts HTML markup. The card renders it inside its " +
+              "shadow DOM, so your styles are isolated from the dashboard."
+            );
           }
           return undefined;
         },
@@ -2131,9 +2186,9 @@
       if (!root) return;
 
       // Inject styles once.
-      if (!root.querySelector('style[data-card-styles]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-card-styles', '');
+      if (!root.querySelector("style[data-card-styles]")) {
+        const style = document.createElement("style");
+        style.setAttribute("data-card-styles", "");
         style.textContent = allStyles;
         root.appendChild(style);
       }
@@ -2147,7 +2202,7 @@
       //
       // Two kinds of listeners may be attached:
       //   1. Internal header-nav arrow clicks (always wired up).
-      //      These route through `router.navigate()` and never
+      //      These route through this card instance's router and never
       //      dispatch hass-action events. The D-pad is also
       //      fully self-contained (see dpad.js) — it dispatches its
       //      own `dpad-press` / `dpad-release` / `dpad-toggle`
@@ -2158,20 +2213,20 @@
       //      listeners (only attached when the user has configured
       //      them in YAML). The controller's handlers are no-ops
       //      if the corresponding action isn't set.
-      if (!root.querySelector('[data-card-host]')) {
-        const host = document.createElement('div');
-        host.setAttribute('data-card-host', '');
+      if (!root.querySelector("[data-card-host]")) {
+        const host = document.createElement("div");
+        host.setAttribute("data-card-host", "");
 
         // (1) Internal header-nav arrow click delegation.
         //     Triggered by factory.js's <button data-card-nav="...">
         //     elements in the header.
-        host.addEventListener('click', (ev) => {
+        host.addEventListener("click", (ev) => {
           const target = ev.target;
           if (!(target instanceof Element)) return;
-          const btn = target.closest('[data-card-nav]');
+          const btn = target.closest("[data-card-nav]");
           if (!btn || !host.contains(btn)) return;
-          const view = btn.getAttribute('data-card-nav');
-          if (view) router.navigate(view);
+          const view = btn.getAttribute("data-card-nav");
+          if (view) this._router.navigate(view);
         });
 
         // (2) Optional user-configured tap actions.
@@ -2184,22 +2239,22 @@
           // dpad-control lives in its own shadow root; the user's
           // tap_action will only fire for taps on the card's own
           // chrome outside the dpad.)
-          host.addEventListener('click', (ev) => {
+          host.addEventListener("click", (ev) => {
             const target = ev.target;
-            if (target instanceof Element && target.closest('[data-card-nav]')) {
+            if (target instanceof Element && target.closest("[data-card-nav]")) {
               return; // nav arrow click — handled above
             }
             this._controller.handleClick(this, ev);
           });
         }
         if (cfg.hold_action) {
-          host.addEventListener('contextmenu', (ev) => {
+          host.addEventListener("contextmenu", (ev) => {
             ev.preventDefault();
             this._controller.handleHold(this, ev);
           });
         }
         if (cfg.double_tap_action) {
-          host.addEventListener('dblclick', (ev) => {
+          host.addEventListener("dblclick", (ev) => {
             this._controller.handleDoubleClick(this, ev);
           });
         }
@@ -2220,7 +2275,7 @@
 
     _render() {
       if (!this.shadowRoot) return;
-      const host = this.shadowRoot.querySelector('[data-card-host]');
+      const host = this.shadowRoot.querySelector("[data-card-host]");
       if (!host) return;
 
       try {
@@ -2232,7 +2287,8 @@
         // <dpad-control> and <dpad-readout> elements, wiping the
         // mic toggle state and the activity log. Instead, only
         // re-render when the rendered HTML actually changes (e.g.
-        // when the view changes via router.navigate, or when the
+        // when the view changes via this card instance's router,
+        // or when the
         // config updates).
         if (host.innerHTML !== nextHtml) {
           host.innerHTML = nextHtml;
@@ -2245,7 +2301,9 @@
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(`[${CARD_TYPE}] render failed`, err);
-        host.innerHTML = renderErrorMessage(`Render error: ${String(err.message || err)}`);
+        host.innerHTML = renderErrorMessage(
+          `Render error: ${String(err.message || err)}`,
+        );
       }
     }
 
@@ -2260,19 +2318,29 @@
      */
     _wireDpadReadout(host) {
       if (!host) return;
-      const dpad = host.querySelector('dpad-control');
-      const readout = host.querySelector('dpad-readout');
+      const dpad = host.querySelector("dpad-control");
+      const readout = host.querySelector("dpad-readout");
       if (!dpad || !readout) return;
 
       // If we already wired these exact instances, nothing to do.
-      if (this._dpadReadoutWired && this._dpadReadoutWired.dpad === dpad &&
-          this._dpadReadoutWired.readout === readout) {
+      if (
+        this._dpadReadoutWired &&
+        this._dpadReadoutWired.dpad === dpad &&
+        this._dpadReadoutWired.readout === readout
+      ) {
         return;
       }
 
       // Otherwise (re-)subscribe. Disconnect any previous subscription first.
-      if (this._dpadReadoutWired && typeof this._dpadReadoutWired.off === 'function') {
-        try { this._dpadReadoutWired.off(); } catch (_e) { /* ignore */ }
+      if (
+        this._dpadReadoutWired &&
+        typeof this._dpadReadoutWired.off === "function"
+      ) {
+        try {
+          this._dpadReadoutWired.off();
+        } catch (_e) {
+          /* ignore */
+        }
       }
 
       const off = readout.subscribe(dpad);
@@ -2284,12 +2352,15 @@
   // Registration
   // -----------------------------------------------------------
 
-  if (!customElements.get('hass-vanilla-boilerplate-card')) {
-    customElements.define('hass-vanilla-boilerplate-card', HassVanillaBoilerplateCard);
+  if (!customElements.get("hass-vanilla-boilerplate-card")) {
+    customElements.define(
+      "hass-vanilla-boilerplate-card",
+      HassVanillaBoilerplateCard,
+    );
   }
 
   // Register for the HA card picker dialog.
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     window.customCards = window.customCards || [];
     if (!window.customCards.some((c) => c && c.type === CARD_TYPE)) {
       window.customCards.push({
@@ -2302,12 +2373,15 @@
   }
 
   // Surface a single info message on first load to confirm install.
-  if (typeof window !== 'undefined' && !window.__HASS_VANILLA_BOOTSTRAP_LOGGED__) {
+  if (
+    typeof window !== "undefined" &&
+    !window.__HASS_VANILLA_BOOTSTRAP_LOGGED__
+  ) {
     window.__HASS_VANILLA_BOOTSTRAP_LOGGED__ = true;
     // eslint-disable-next-line no-console
     console.info(
       `%c[${CARD_TYPE}]`,
-      'color: #03a9f4; font-weight: bold;',
+      "color: #03a9f4; font-weight: bold;",
       `${CARD_NAME} registered.`,
     );
   }
