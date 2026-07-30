@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.33";
+  const CARD_VERSION = "0.1.34";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1762,7 +1762,21 @@
 
   // Direction actions the readout cares about. The microphone is
   // intentionally excluded per the user spec.
-  const TRACKED_ACTIONS = Object.freeze(new Set(['up', 'down', 'left', 'right']));
+  const TRACKED_ACTIONS = Object.freeze(
+    new Set([
+      'up',
+      'up-right',
+      'right',
+      'down-right',
+      'down',
+      'down-left',
+      'left',
+      'up-left',
+    ]),
+  );
+
+  const PRESS_EVENTS = Object.freeze(['dpad-press', 'dpad-8way-press']);
+  const RELEASE_EVENTS = Object.freeze(['dpad-release', 'dpad-8way-release']);
 
   // Repeater interval (ms) for "keep printing while held".
   const REPEAT_INTERVAL_MS = 150;
@@ -2000,7 +2014,7 @@
      *   - On dpad-release:          stop the repeater for that action.
      *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
      *
-     * @param {HTMLElement} dpadEl   a <dpad-control> element
+    * @param {HTMLElement} dpadEl   a <dpad-control> or <dpad-8way-control> element
      * @param {object} [opts]
      * @param {(action: string) => string} [opts.format]
      *        override the default line formatter. Receives the
@@ -2031,12 +2045,12 @@
         this._stopRepeater(action);
       };
 
-      dpadEl.addEventListener('dpad-press', onPress);
-      dpadEl.addEventListener('dpad-release', onRelease);
+      PRESS_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onPress));
+      RELEASE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onRelease));
 
       const off = () => {
-        dpadEl.removeEventListener('dpad-press', onPress);
-        dpadEl.removeEventListener('dpad-release', onRelease);
+        PRESS_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onPress));
+        RELEASE_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onRelease));
         this._stopAllRepeaters();
       };
       this._unsubscribers.push(off);
@@ -2947,7 +2961,7 @@
      */
     _wireDpadReadout(host) {
       if (!host) return;
-      const dpad = host.querySelector("dpad-control");
+      const dpad = host.querySelector("dpad-control, dpad-8way-control");
       const readout = host.querySelector("dpad-readout");
       if (!dpad || !readout) return;
 

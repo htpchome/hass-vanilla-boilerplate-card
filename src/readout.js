@@ -39,17 +39,31 @@
 // Class hooks & custom event names
 // ----------------------------------------------------------------
 
-const READOUT_CLASS = 'dpad-readout';
-const READOUT_LOG_CLASS = 'dpad-readout__log';
-const READOUT_LINE_CLASS = 'dpad-readout__line';
-const READOUT_CLEAR_CLASS = 'dpad-readout__clear';
-const READOUT_EMPTY_CLASS = 'dpad-readout__empty';
+const READOUT_CLASS = "dpad-readout";
+const READOUT_LOG_CLASS = "dpad-readout__log";
+const READOUT_LINE_CLASS = "dpad-readout__line";
+const READOUT_CLEAR_CLASS = "dpad-readout__clear";
+const READOUT_EMPTY_CLASS = "dpad-readout__empty";
 
-const EVT_LOG = 'readout-log';
+const EVT_LOG = "readout-log";
 
 // Direction actions the readout cares about. The microphone is
 // intentionally excluded per the user spec.
-const TRACKED_ACTIONS = Object.freeze(new Set(['up', 'down', 'left', 'right']));
+const TRACKED_ACTIONS = Object.freeze(
+  new Set([
+    "up",
+    "up-right",
+    "right",
+    "down-right",
+    "down",
+    "down-left",
+    "left",
+    "up-left",
+  ]),
+);
+
+const PRESS_EVENTS = Object.freeze(["dpad-press", "dpad-8way-press"]);
+const RELEASE_EVENTS = Object.freeze(["dpad-release", "dpad-8way-release"]);
 
 // Repeater interval (ms) for "keep printing while held".
 const REPEAT_INTERVAL_MS = 150;
@@ -60,7 +74,7 @@ const MAX_LOG_LINES = 500;
 
 // Default labels per action. The default appends "[<action>]"
 // which the user explicitly asked for. Override via subscribe().
-const DEFAULT_FORMAT = (action) => '[' + action + ']';
+const DEFAULT_FORMAT = (action) => "[" + action + "]";
 
 // ----------------------------------------------------------------
 // Styles \u2014 self-contained, uses only HA design tokens for theming
@@ -199,7 +213,7 @@ const READOUT_STYLES = `
 class DpadReadout extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     /** @type {string[]} newest line last */
     this._log = [];
     /** @type {Map<string, number>} action -> interval id */
@@ -225,7 +239,11 @@ class DpadReadout extends HTMLElement {
   disconnectedCallback() {
     // Clean up any active event subscriptions and repeat timers.
     this._unsubscribers.forEach((off) => {
-      try { off(); } catch (_e) { /* ignore */ }
+      try {
+        off();
+      } catch (_e) {
+        /* ignore */
+      }
     });
     this._unsubscribers = [];
     this._stopAllRepeaters();
@@ -246,7 +264,7 @@ class DpadReadout extends HTMLElement {
    * @param {string} text
    */
   append(text) {
-    const line = text == null ? '' : String(text);
+    const line = text == null ? "" : String(text);
     if (!line) return;
     this._log.push(line);
     if (this._log.length > MAX_LOG_LINES) {
@@ -287,7 +305,7 @@ class DpadReadout extends HTMLElement {
    *   - On dpad-release:          stop the repeater for that action.
    *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
    *
-   * @param {HTMLElement} dpadEl   a <dpad-control> element
+   * @param {HTMLElement} dpadEl   a <dpad-control> or <dpad-8way-control> element
    * @param {object} [opts]
    * @param {(action: string) => string} [opts.format]
    *        override the default line formatter. Receives the
@@ -296,13 +314,13 @@ class DpadReadout extends HTMLElement {
    * @returns {() => void}         unsubscribe function
    */
   subscribe(dpadEl, opts = {}) {
-    if (!dpadEl || typeof dpadEl.addEventListener !== 'function') {
+    if (!dpadEl || typeof dpadEl.addEventListener !== "function") {
       // eslint-disable-next-line no-console
-      console.warn('[dpad-readout] subscribe() needs a valid element');
+      console.warn("[dpad-readout] subscribe() needs a valid element");
       return () => {};
     }
 
-    if (typeof opts.format === 'function') this._format = opts.format;
+    if (typeof opts.format === "function") this._format = opts.format;
 
     const onPress = (ev) => {
       const action = ev.detail && ev.detail.action;
@@ -318,12 +336,14 @@ class DpadReadout extends HTMLElement {
       this._stopRepeater(action);
     };
 
-    dpadEl.addEventListener('dpad-press', onPress);
-    dpadEl.addEventListener('dpad-release', onRelease);
+    PRESS_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onPress));
+    RELEASE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onRelease));
 
     const off = () => {
-      dpadEl.removeEventListener('dpad-press', onPress);
-      dpadEl.removeEventListener('dpad-release', onRelease);
+      PRESS_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onPress));
+      RELEASE_EVENTS.forEach((evt) =>
+        dpadEl.removeEventListener(evt, onRelease),
+      );
       this._stopAllRepeaters();
     };
     this._unsubscribers.push(off);
@@ -368,20 +388,28 @@ class DpadReadout extends HTMLElement {
     if (this._mounted) return;
     this._mounted = true;
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = READOUT_STYLES;
 
-    const host = document.createElement('div');
+    const host = document.createElement("div");
     host.className = READOUT_CLASS;
     host.innerHTML =
-      '<div class="' + READOUT_CLASS + '__header">' +
-        '<span class="' + READOUT_CLASS + '__title">Activity</span>' +
-        '<button type="button" class="' + READOUT_CLEAR_CLASS + '" aria-label="Clear log">' +
-          '<ha-icon icon="mdi:delete-sweep"></ha-icon>' +
-          '<span>Clear</span>' +
-        '</button>' +
-      '</div>' +
-      '<div class="' + READOUT_LOG_CLASS + '" role="log" aria-live="polite"></div>';
+      '<div class="' +
+      READOUT_CLASS +
+      '__header">' +
+      '<span class="' +
+      READOUT_CLASS +
+      '__title">Activity</span>' +
+      '<button type="button" class="' +
+      READOUT_CLEAR_CLASS +
+      '" aria-label="Clear log">' +
+      '<ha-icon icon="mdi:delete-sweep"></ha-icon>' +
+      "<span>Clear</span>" +
+      "</button>" +
+      "</div>" +
+      '<div class="' +
+      READOUT_LOG_CLASS +
+      '" role="log" aria-live="polite"></div>';
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(host);
@@ -389,19 +417,22 @@ class DpadReadout extends HTMLElement {
     // Wire the clear button. The button is inside the shadow root,
     // so we bind the listener to the host element (composed
     // events bubble across the shadow boundary).
-    const clearBtn = this.shadowRoot.querySelector('.' + READOUT_CLEAR_CLASS);
+    const clearBtn = this.shadowRoot.querySelector("." + READOUT_CLEAR_CLASS);
     if (clearBtn) {
-      clearBtn.addEventListener('click', () => this.clear());
+      clearBtn.addEventListener("click", () => this.clear());
     }
   }
 
   _render() {
-    const logEl = this.shadowRoot && this.shadowRoot.querySelector('.' + READOUT_LOG_CLASS);
+    const logEl =
+      this.shadowRoot && this.shadowRoot.querySelector("." + READOUT_LOG_CLASS);
     if (!logEl) return;
 
     if (this._log.length === 0) {
       logEl.innerHTML =
-        '<div class="' + READOUT_EMPTY_CLASS + '">No activity yet \u2014 push a direction button.</div>';
+        '<div class="' +
+        READOUT_EMPTY_CLASS +
+        '">No activity yet \u2014 push a direction button.</div>';
       return;
     }
 
@@ -409,9 +440,14 @@ class DpadReadout extends HTMLElement {
     // textContent-safe (no innerHTML) so user-influenced strings
     // (if any) can never inject markup.
     const lines = this._log.map(
-      (line) => '<div class="' + READOUT_LINE_CLASS + '">' + escapeHtml(line) + '</div>',
+      (line) =>
+        '<div class="' +
+        READOUT_LINE_CLASS +
+        '">' +
+        escapeHtml(line) +
+        "</div>",
     );
-    logEl.innerHTML = lines.join('');
+    logEl.innerHTML = lines.join("");
 
     // Auto-scroll to the bottom so the newest line is always
     // visible. (No-op if the user has scrolled up to read older
@@ -441,7 +477,7 @@ class DpadReadout extends HTMLElement {
 // Lightweight HTML-escape used when rendering log lines. We
 // import lazily to keep this module dependency-free.
 function escapeHtml(value) {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) return "";
   return String(value)
     .replace(/&/g, String.fromCharCode(38, 97, 109, 112, 59))
     .replace(/</g, String.fromCharCode(38, 108, 116, 59))
@@ -452,8 +488,17 @@ function escapeHtml(value) {
 
 // Register the custom element. Guard against double-registration
 // (e.g. if this module is imported more than once).
-if (typeof customElements !== 'undefined' && !customElements.get('dpad-readout')) {
-  customElements.define('dpad-readout', DpadReadout);
+if (
+  typeof customElements !== "undefined" &&
+  !customElements.get("dpad-readout")
+) {
+  customElements.define("dpad-readout", DpadReadout);
 }
 
-export { DpadReadout, EVT_LOG, TRACKED_ACTIONS, REPEAT_INTERVAL_MS, MAX_LOG_LINES };
+export {
+  DpadReadout,
+  EVT_LOG,
+  TRACKED_ACTIONS,
+  REPEAT_INTERVAL_MS,
+  MAX_LOG_LINES,
+};

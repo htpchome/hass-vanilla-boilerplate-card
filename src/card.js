@@ -344,7 +344,7 @@ class HassVanillaBoilerplateCard extends HTMLElement {
    */
   _wireDpadReadout(host) {
     if (!host) return;
-    const dpad = host.querySelector("dpad-control");
+    const dpad = host.querySelector("dpad-control, dpad-8way-control");
     const readout = host.querySelector("dpad-readout");
     if (!dpad || !readout) return;
 
