@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.42";
+  const CARD_VERSION = "0.1.43";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1846,6 +1846,25 @@
   }
 
   .slice-button.is-pressed .slice-chevron {
+    stroke: #ffffff !important;
+  }
+
+  /* Touch safety override: some mobile browsers leave pseudo
+     hover/active artifacts. Force base visuals unless JS marks
+     the slice as actively pressed. */
+  :host([data-input-mode="touch"]) .slice-button path {
+    fill: var(--circle-pad-bg-1) !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button .slice-chevron {
+    stroke: #555555 !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button.is-pressed path {
+    fill: var(--circle-pad-dark-primary) !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }
 

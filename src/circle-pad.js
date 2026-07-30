@@ -134,6 +134,25 @@ const CIRCLE_PAD_STYLES = `
     stroke: #ffffff !important;
   }
 
+  /* Touch safety override: some mobile browsers leave pseudo
+     hover/active artifacts. Force base visuals unless JS marks
+     the slice as actively pressed. */
+  :host([data-input-mode="touch"]) .slice-button path {
+    fill: var(--circle-pad-bg-1) !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button .slice-chevron {
+    stroke: #555555 !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button.is-pressed path {
+    fill: var(--circle-pad-dark-primary) !important;
+  }
+
+  :host([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
+    stroke: #ffffff !important;
+  }
+
   @media (hover: hover) {
     :host(:not([data-input-mode="touch"])) .slice-button:hover .slice-chevron {
       stroke: #ffffff !important;
