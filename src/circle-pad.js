@@ -113,6 +113,8 @@ const CIRCLE_PAD_STYLES = `
 
   .slice-button path {
     fill: var(--circle-pad-bg-1);
+    /* Default (release) fade-out speed */
+    transition: fill 140ms ease-out;
   }
 
   @media (hover: hover) {
@@ -123,15 +125,22 @@ const CIRCLE_PAD_STYLES = `
 
   .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary);
+    /* Faster press-in so taps feel immediate */
+    transition-duration: 70ms;
+    transition-timing-function: ease-in;
   }
 
   .slice-chevron {
     stroke: #555555;
-    transition: stroke 0.15s ease;
+    /* Default (release) fade-out speed */
+    transition: stroke 140ms ease-out;
   }
 
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
+    /* Faster press-in so taps feel immediate */
+    transition-duration: 70ms;
+    transition-timing-function: ease-in;
   }
 
   /* Touch safety override: some mobile browsers leave pseudo
