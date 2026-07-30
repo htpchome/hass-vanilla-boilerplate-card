@@ -30,7 +30,13 @@ import { CardController } from "./controller.js";
 // elements when these modules are loaded. The factory renders
 // both elements into the detail view's content area; each
 // module is a fully self-contained unit.
+// Importing dpad.js and readout.js for their side effects:
+// they register the <dpad-control> and <dpad-readout> custom
+// elements when these modules are loaded. The factory renders
+// the 4-way dpad view; dpad-8way.js registers the <dpad-8way-control>
+// element used by the third (8-way) view.
 import "./dpad.js";
+import "./dpad-8way.js";
 import "./readout.js";
 import { buildCardHtml } from "./factory.js";
 import { renderErrorMessage, warnOnce } from "./helpers.js";
@@ -234,15 +240,18 @@ class HassVanillaBoilerplateCard extends HTMLElement {
       const host = document.createElement("div");
       host.setAttribute("data-card-host", "");
 
-      // (1) Internal header-nav arrow click delegation.
-      //     Triggered by factory.js's <button data-card-nav="...">
-      //     elements in the header.
+      // (1) Internal page-nav click delegation.
+      //     Triggered by factory.js's <button data-page-nav="...">
+      //     elements in the header. The active page (the one
+      //     we're currently viewing) is rendered as a non-button
+      //     <span> and is not clickable, so the closest("[data-page-nav]")
+      //     check naturally filters it out.
       host.addEventListener("click", (ev) => {
         const target = ev.target;
         if (!(target instanceof Element)) return;
-        const btn = target.closest("[data-card-nav]");
+        const btn = target.closest("[data-page-nav]");
         if (!btn || !host.contains(btn)) return;
-        const view = btn.getAttribute("data-card-nav");
+        const view = btn.getAttribute("data-page-nav");
         if (view) this._router.navigate(view);
       });
 
@@ -258,8 +267,8 @@ class HassVanillaBoilerplateCard extends HTMLElement {
         // chrome outside the dpad.)
         host.addEventListener("click", (ev) => {
           const target = ev.target;
-          if (target instanceof Element && target.closest("[data-card-nav]")) {
-            return; // nav arrow click — handled above
+          if (target instanceof Element && target.closest("[data-page-nav]")) {
+            return; // page nav click — handled above
           }
           this._controller.handleClick(this, ev);
         });

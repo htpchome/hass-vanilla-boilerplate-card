@@ -121,38 +121,64 @@ export const cardStyles = `
   }
 `;
 
-// Header nav arrow button — used to switch between internal views.
+// Header page-nav strip — three numeric buttons (1) (2) (3) in
+// the top-left of the card header, used to switch between
+// internal views. The active page is rendered as a non-button
+// <span> with a distinct background; the other two are real
+// buttons that fire dpad-press-like events handled by card.js.
 export const navStyles = `
-  .card-nav-arrow {
+  .card-page-nav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 6px;
+  }
+
+  .card-page-nav__item {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
     margin: 0;
+    padding: 0;
     background: transparent;
-    border: none;
-    border-radius: 50%;
+    border: 1px solid var(--divider-color, transparent);
+    border-radius: 4px;
     color: var(--secondary-text-color);
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1;
     cursor: pointer;
-    transition: background-color 120ms ease, color 120ms ease;
+    transition: background-color 120ms ease, color 120ms ease,
+      border-color 120ms ease;
   }
 
-  .card-nav-arrow:hover,
-  .card-nav-arrow:focus-visible {
+  .card-page-nav__item:hover,
+  .card-page-nav__item:focus-visible {
     background: var(--divider-color, rgba(127, 127, 127, 0.12));
     color: var(--primary-text-color);
     outline: none;
   }
 
-  .card-nav-arrow:active {
+  .card-page-nav__item:active {
     background: var(--divider-color, rgba(127, 127, 127, 0.2));
   }
 
-  .card-nav-arrow__icon {
-    --mdc-icon-size: 24px;
+  .card-page-nav__item--active {
+    /* The current page is rendered as a <span> with this class.
+       Visually mark it as the selected item: filled background,
+       accent border, bold weight. Cursor is default (not a
+       button) since clicking it would be a no-op. */
+    background: var(--primary-color, #03a9f4);
+    border-color: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    font-weight: 600;
+    cursor: default;
   }
 `;
 

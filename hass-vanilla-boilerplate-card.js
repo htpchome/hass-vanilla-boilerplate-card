@@ -29,6 +29,8 @@
     MAIN: "main",
     // Reserved for future tabs/views added via router.js
     DETAIL: "detail",
+    // Third view: the 8-way dpad. See src/dpad-8way.js.
+    DETAIL_8WAY: "detail-8way",
     SETTINGS: "settings",
   });
 
@@ -582,9 +584,9 @@
   });
 
   // Custom events dispatched on the host element.
-  const EVT_PRESS = "dpad-press";
-  const EVT_RELEASE = "dpad-release";
-  const EVT_TOGGLE = "dpad-toggle";
+  const EVT_PRESS$1 = "dpad-press";
+  const EVT_RELEASE$1 = "dpad-release";
+  const EVT_TOGGLE$1 = "dpad-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -597,7 +599,7 @@
     MICROPHONE_OFF: "mdi:microphone-off",
   });
 
-  const renderDpadIcon = (key, opts = {}) => {
+  const renderDpadIcon$1 = (key, opts = {}) => {
     const name = DPAD_ICON_NAMES[key];
     if (!name) return "";
     const cls = opts.className ? ' class="' + opts.className + '"' : "";
@@ -757,12 +759,12 @@
    * @param {string} [activeIconKey] optional alt icon for toggles
    * @returns {string} raw HTML
    */
-  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
-    let inner = renderDpadIcon(iconKey, {
+  const buildButtonHtml$1 = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderDpadIcon$1(iconKey, {
       className: DPAD_BTN_CLASS + "__icon dpad__icon--default",
     });
     if (activeIconKey) {
-      inner += renderDpadIcon(activeIconKey, {
+      inner += renderDpadIcon$1(activeIconKey, {
         className: DPAD_BTN_CLASS + "__icon dpad__icon--active",
       });
     }
@@ -790,21 +792,21 @@
    * Render the full D-pad markup.
    * @returns {string} raw HTML
    */
-  const buildDpadHtml = () => {
-    const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
-    const down = buildButtonHtml(
+  const buildDpadHtml$1 = () => {
+    const up = buildButtonHtml$1(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
+    const down = buildButtonHtml$1(
       DPAD_ACTIONS.DOWN,
       DPAD_BTN_DOWN,
       "DPAD_DOWN",
       "Down",
     );
-    const left = buildButtonHtml(
+    const left = buildButtonHtml$1(
       DPAD_ACTIONS.LEFT,
       DPAD_BTN_LEFT,
       "DPAD_LEFT",
       "Left",
     );
-    const right = buildButtonHtml(
+    const right = buildButtonHtml$1(
       DPAD_ACTIONS.RIGHT,
       DPAD_BTN_RIGHT,
       "DPAD_RIGHT",
@@ -814,7 +816,7 @@
     //   - default (off): show mdi:microphone-off
     //   - active  (on):  show mdi:microphone (recording in progress)
     // The first iconKey is the default; the second is the active.
-    const mic = buildButtonHtml(
+    const mic = buildButtonHtml$1(
       DPAD_ACTIONS.MIC,
       DPAD_BTN_MIC,
       "MICROPHONE_OFF",
@@ -940,7 +942,7 @@
       style.textContent = DPAD_STYLES;
 
       const host = document.createElement("div");
-      host.innerHTML = buildDpadHtml();
+      host.innerHTML = buildDpadHtml$1();
 
       this.shadowRoot.appendChild(style);
       this.shadowRoot.appendChild(host.firstElementChild);
@@ -970,7 +972,7 @@
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE, { action: state.action });
+        this._dispatch(EVT_RELEASE$1, { action: state.action });
         return true;
       };
 
@@ -985,7 +987,7 @@
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS, { action });
+        this._dispatch(EVT_PRESS$1, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
         if (
@@ -1008,7 +1010,7 @@
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       };
       root.addEventListener("pointerup", release);
       root.addEventListener("pointercancel", release);
@@ -1021,7 +1023,7 @@
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       });
 
       // click: toggle the mic button
@@ -1031,7 +1033,7 @@
         if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE, {
+        this._dispatch(EVT_TOGGLE$1, {
           action: DPAD_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1073,6 +1075,554 @@
     !customElements.get("dpad-control")
   ) {
     customElements.define("dpad-control", DpadControl);
+  }
+
+  /**
+   * dpad-8way.js
+   * ---------------------------------------------------------------
+   * Reusable D-pad touchpad custom element: <dpad-8way-control>
+   *
+   * Drop this element into any HTML (or shadow root) and it will
+   * render a 5-button circular touchpad:
+   *
+   *        [ ▲ ]
+   *  [ ◄ ]  [ 🎙 ]  [ ► ]
+   *        [ ▼ ]
+   *
+   * (Currently a 1:1 clone of dpad.js with renamed internals so
+   * the two dpad elements can coexist on the same page without
+   * colliding. The 8-way layout — 4 cardinals + 4 diagonals + 1
+   * mic — is the next iteration. Names are namespaced with the
+   * `8way` infix throughout: custom-element tag, root class,
+   * button BEM modifiers, data attribute, event names, exports.)
+   *
+   * The element is fully self-contained:
+   *   - Shadow DOM for style isolation
+   *   - Native HA design tokens (auto-themes light/dark/custom)
+   *   - Owns its own pointer event handling (mouse + touch)
+   *   - Dispatches standard CustomEvents that bubble+compose, so
+   *     consumers in any shadow root can listen for them.
+   *
+   * No coupling to card.js, controller.js, or any other module in
+   * this project — you can copy this file into another project and
+   * use <dpad-8way-control> as-is.
+   * ---------------------------------------------------------------
+   */
+
+  // ----------------------------------------------------------------
+  // Internal class hooks & data attributes (kept private to the module)
+  // ----------------------------------------------------------------
+
+  const DPAD_8WAY_CLASS = "dpad-8way";
+  const DPAD_8WAY_BTN_CLASS = "dpad-8way__btn";
+  const DPAD_8WAY_BTN_UP = "dpad-8way__btn--up";
+  const DPAD_8WAY_BTN_DOWN = "dpad-8way__btn--down";
+  const DPAD_8WAY_BTN_LEFT = "dpad-8way__btn--left";
+  const DPAD_8WAY_BTN_RIGHT = "dpad-8way__btn--right";
+  const DPAD_8WAY_BTN_MIC = "dpad-8way__btn--mic";
+  const DPAD_8WAY_DATA_ACTION = "data-dpad-8way-action";
+  const DPAD_8WAY_ACTIONS = Object.freeze({
+    UP: "up",
+    DOWN: "down",
+    LEFT: "left",
+    RIGHT: "right",
+    MIC: "mic",
+  });
+
+  // Custom events dispatched on the host element. Use 8way-infixed
+  // event names so a single page can have both a <dpad-control>
+  // and a <dpad-8way-control> without event name collisions.
+  const EVT_PRESS = "dpad-8way-press";
+  const EVT_RELEASE = "dpad-8way-release";
+  const EVT_TOGGLE = "dpad-8way-toggle";
+
+  // Local icon map keeps this module self-contained so it can be
+  // copied into any HA card without importing project files.
+  const DPAD_8WAY_ICON_NAMES = Object.freeze({
+    DPAD_UP: "mdi:chevron-up",
+    DPAD_DOWN: "mdi:chevron-down",
+    DPAD_LEFT: "mdi:chevron-left",
+    DPAD_RIGHT: "mdi:chevron-right",
+    MICROPHONE: "mdi:microphone",
+    MICROPHONE_OFF: "mdi:microphone-off",
+  });
+
+  const renderDpadIcon = (key, opts = {}) => {
+    const name = DPAD_8WAY_ICON_NAMES[key];
+    if (!name) return "";
+    const cls = opts.className ? ' class="' + opts.className + '"' : "";
+    return '<ha-icon icon="' + name + '"' + cls + "></ha-icon>";
+  };
+
+  // ----------------------------------------------------------------
+  // Styles — self-contained, uses only HA design tokens for theming
+  // ----------------------------------------------------------------
+
+  // Visual design matches the reference image:
+  //   - Four arrow icons at the cardinal points (transparent
+  //     backgrounds; just the icon shows on the plate).
+  //   - Four diagonal "spoke" lines connecting the center disc to
+  //     each arrow icon (rendered as a single CSS background using
+  //     repeating-linear-gradient on the .dpad container).
+  //   - A darker raised disc in the center holding the mic button.
+  //
+  // The colors are intentionally dark (not theme-aware) to match
+  // the reference. If you want the D-pad to follow the active HA
+  // theme, swap the gradient stops and the icon color to use
+  // HA design tokens (--primary-text-color, --secondary-background-color, etc.).
+  const DPAD_8WAY_STYLES = `
+  :host {
+    display: block;
+    --dpad-size: 220px;
+    --dpad-arrow-icon-size: 42px;   /* 150% larger than original 28px */
+    --dpad-mic-size: 96px;          /* 150% larger than original 64px */
+    --dpad-mic-icon-size: 54px;     /* 150% larger than original 36px */
+    --dpad-bg-1: var(--secondary-background-color);
+    --dpad-bg-2: var(--primary-background-color);
+    --dpad-text-1: var(--primary-text-color);
+    --dpad-text-2: var(--secondary-text-color);
+    --dpad-text-3: var(--disabled-text-color);
+    --dpad-text-4: var(--text-primary-color);
+  }
+
+  .${DPAD_8WAY_CLASS} {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    column-gap: 0;
+    row-gap: 0;
+    width: var(--dpad-size);
+    height: var(--dpad-size);
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    /* Plate gradient (no decorative overlay). */
+    /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
+    background-image:
+      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+      radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
+    border: 1px solid var(--dpad-text-3);
+    box-shadow: inset 0 0 12px var(--dpad-text-3);
+    overflow: hidden;
+  }
+
+  .${DPAD_8WAY_BTN_CLASS} {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: var(--dpad-text-2); /* muted icon color */
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: color 80ms ease, transform 80ms ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Hover effect is scoped to devices with a real pointing
+     device (mouse, trackpad, stylus). On touch screens the
+     hover state would otherwise stick after a tap because the
+     finger remains over the button at the last tap location
+     until the user touches elsewhere. The press state is still
+     driven by the is-pressed class (JS), which works correctly
+     on both touch and mouse. */
+  @media (hover: hover) {
+    .${DPAD_8WAY_BTN_CLASS}:hover {
+      color: var(--dpad-text-1);
+    }
+  }
+
+  .${DPAD_8WAY_BTN_CLASS}:focus-visible {
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: -4px;
+  }
+
+  .${DPAD_8WAY_BTN_CLASS} ha-icon {
+    --mdc-icon-size: var(--dpad-arrow-icon-size);
+    pointer-events: none;
+  }
+
+  .${DPAD_8WAY_BTN_UP}    { grid-area: 1 / 2; }
+  .${DPAD_8WAY_BTN_DOWN}  { grid-area: 3 / 2; }
+  .${DPAD_8WAY_BTN_LEFT}  { grid-area: 2 / 1; }
+  .${DPAD_8WAY_BTN_RIGHT} { grid-area: 2 / 3; }
+  .${DPAD_8WAY_BTN_MIC}   {
+    grid-area: 2 / 2;
+    width: var(--dpad-mic-size);
+    height: var(--dpad-mic-size);
+    align-self: center;
+    justify-self: center;
+    margin: auto;
+    /* The raised dark disc around the mic. */
+    background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
+    border: 1px solid var(--dpad-text-1);
+    border-radius: 50%;
+    color: var(--dpad-text-2);
+  }
+
+  .${DPAD_8WAY_BTN_MIC} ha-icon {
+    --mdc-icon-size: var(--dpad-mic-icon-size);
+  }
+
+  /* Momentary pressed state for arrow buttons — just brighten
+     the icon, no background change (the plate is the background). */
+  .${DPAD_8WAY_BTN_CLASS}.is-pressed {
+    color: var(--dpad-text-1);
+    transform: scale(0.92);
+  }
+
+  /* Mic toggle: when active, show a subtle green ring around
+     the central disc. (Background stays dark per the reference.) */
+  .${DPAD_8WAY_BTN_MIC}.is-active {
+    box-shadow:
+      inset 0 0 0 2px var(--success-color),
+      inset 0 0 12px var(--success-color);
+  }
+
+  /* Mic icon swap: hide default when active, show "off" icon. */
+  .${DPAD_8WAY_BTN_MIC} .dpad-8way__icon--active { display: none; }
+  .${DPAD_8WAY_BTN_MIC}.is-active .dpad-8way__icon--default { display: none; }
+  .${DPAD_8WAY_BTN_MIC}.is-active .dpad-8way__icon--active  { display: inline-flex; }
+`;
+
+  // ----------------------------------------------------------------
+  // DOM construction
+  // ----------------------------------------------------------------
+
+  /**
+   * Build the inner DOM tree for a D-pad button.
+   *
+   * @param {string} action     one of DPAD_8WAY_ACTIONS.*
+   * @param {string} extraClass BEM modifier
+   * @param {string} iconKey    key into ICON_NAMES (default icon)
+   * @param {string} label      aria-label
+   * @param {string} [activeIconKey] optional alt icon for toggles
+   * @returns {string} raw HTML
+   */
+  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderDpadIcon(iconKey, {
+      className: DPAD_8WAY_BTN_CLASS + "__icon dpad-8way__icon--default",
+    });
+    if (activeIconKey) {
+      inner += renderDpadIcon(activeIconKey, {
+        className: DPAD_8WAY_BTN_CLASS + "__icon dpad-8way__icon--active",
+      });
+    }
+    return (
+      '<button type="button" ' +
+      'class="' +
+      DPAD_8WAY_BTN_CLASS +
+      " " +
+      extraClass +
+      '" ' +
+      DPAD_8WAY_DATA_ACTION +
+      '="' +
+      action +
+      '" ' +
+      'aria-label="' +
+      label +
+      '" ' +
+      'aria-pressed="false">' +
+      inner +
+      "</button>"
+    );
+  };
+
+  /**
+   * Render the full D-pad markup.
+   * @returns {string} raw HTML
+   */
+  const buildDpadHtml = () => {
+    const up = buildButtonHtml(DPAD_8WAY_ACTIONS.UP, DPAD_8WAY_BTN_UP, "DPAD_UP", "Up");
+    const down = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.DOWN,
+      DPAD_8WAY_BTN_DOWN,
+      "DPAD_DOWN",
+      "Down",
+    );
+    const left = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.LEFT,
+      DPAD_8WAY_BTN_LEFT,
+      "DPAD_LEFT",
+      "Left",
+    );
+    const right = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.RIGHT,
+      DPAD_8WAY_BTN_RIGHT,
+      "DPAD_RIGHT",
+      "Right",
+    );
+    // Mic button icon swap:
+    //   - default (off): show mdi:microphone-off
+    //   - active  (on):  show mdi:microphone (recording in progress)
+    // The first iconKey is the default; the second is the active.
+    const mic = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.MIC,
+      DPAD_8WAY_BTN_MIC,
+      "MICROPHONE_OFF",
+      "Toggle microphone",
+      "MICROPHONE",
+    );
+    // Each button is a direct grid child. The grid is 3x3 and each
+    // button uses its own `grid-area` to position itself:
+    //   - up     -> row 1, col 2
+    //   - left   -> row 2, col 1
+    //   - mic    -> row 2, col 2 (the center, slightly larger)
+    //   - right  -> row 2, col 3
+    //   - down   -> row 3, col 2
+    // No slot wrappers — putting multiple buttons in one grid cell
+    // would cause them to overlap (the bug we just fixed).
+    return (
+      '<div class="' +
+      DPAD_8WAY_CLASS +
+      '" role="group" aria-label="D-pad control">' +
+      up +
+      left +
+      mic +
+      right +
+      down +
+      "</div>"
+    );
+  };
+
+  // ----------------------------------------------------------------
+  // The custom element
+  // ----------------------------------------------------------------
+
+  /**
+   * <dpad-8way-control> — a reusable D-pad touchpad custom element.
+   *
+   * Public API:
+   *   - setActive(action, active)  programmatically toggle a button
+   *   - getState()                 returns { mic: boolean }
+   *   - addEventListener('dpad-8way-press',   fn) { action, originalEvent }
+   *   - addEventListener('dpad-8way-release', fn) { action, originalEvent }
+   *   - addEventListener('dpad-8way-toggle',  fn) { action, active, originalEvent }
+   *
+   * All events bubble and are composed, so they cross shadow
+   * boundaries. Consumers in any shadow root can listen to them.
+   */
+  class Dpad8wayControl extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      // State: which buttons are currently pressed / active.
+      this._pressed = new Set();
+      this._pressedByPointer = new Map();
+      this._activeMic = false;
+      // Guard against re-mounting the shadow content if the element
+      // is moved or recycled in the DOM (e.g. when Home Assistant's
+      // card editor re-parents the live card during dialog open/
+      // close). Without this, each connectedCallback appends another
+      // <style> + <div class="dpad-8way"> to the shadow root, which
+      // stacks the dpad UI on top of itself.
+      this._mounted = false;
+    }
+
+    // ---- lifecycle ----
+
+    connectedCallback() {
+      this._mount();
+      this._wirePointerEvents();
+    }
+
+    disconnectedCallback() {
+      // Best-effort: clear any pressed state when the element is
+      // removed from the DOM so we don't leak listeners.
+      this._pressed.clear();
+      // Do NOT reset _mounted here. The element is still the same
+      // instance; on re-connection we want _mount to be a no-op.
+      // If the element is genuinely destroyed (GC), the flag goes
+      // with it. If HA ever does a true element replace, the new
+      // element gets a fresh _mounted=false in its constructor.
+    }
+
+    // ---- public API ----
+
+    /**
+     * Programmatically set the active state of a button.
+     *
+     * @param {string} action one of DPAD_8WAY_ACTIONS.*
+     * @param {boolean} active true to activate, false to deactivate
+     */
+    setActive(action, active) {
+      if (action === DPAD_8WAY_ACTIONS.MIC) {
+        this._activeMic = Boolean(active);
+        this._applyMicState();
+      }
+      // Arrow buttons are momentary; programmatic setActive on them
+      // is a no-op. Use dispatchEvent via setPressed() if you need
+      // to simulate a press.
+    }
+
+    /**
+     * Read the current persistent state of the D-pad.
+     * (Momentary press state is not exposed — only toggles.)
+     *
+     * @returns {{ mic: boolean }}
+     */
+    getState() {
+      return { mic: this._activeMic };
+    }
+
+    // ---- internals ----
+
+    _mount() {
+      // Idempotent: only build the shadow content once per element
+      // instance. connectedCallback can fire multiple times if the
+      // element is moved in the DOM (e.g. by Home Assistant's card
+      // editor re-parenting the live card during dialog open/close);
+      // without this guard, each re-connection would append another
+      // <style> + <div class="dpad-8way"> to the same shadow root, which
+      // visually stacks the dpad UI on top of itself.
+      if (this._mounted) return;
+      this._mounted = true;
+
+      const style = document.createElement("style");
+      style.textContent = DPAD_8WAY_STYLES;
+
+      const host = document.createElement("div");
+      host.innerHTML = buildDpadHtml();
+
+      this.shadowRoot.appendChild(style);
+      this.shadowRoot.appendChild(host.firstElementChild);
+    }
+
+    _wirePointerEvents() {
+      const root = this.shadowRoot;
+      if (!root) return;
+
+      const findBtn = (target) =>
+        target instanceof Element
+          ? target.closest("[" + DPAD_8WAY_DATA_ACTION + "]")
+          : null;
+
+      const clearPressed = (btn) => {
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        this._pressed.delete(action);
+        btn.classList.remove("is-pressed");
+      };
+
+      const releaseByPointer = (ev) => {
+        if (!ev || ev.pointerId === null || ev.pointerId === undefined)
+          return false;
+        const state = this._pressedByPointer.get(ev.pointerId);
+        if (!state) return false;
+        this._pressedByPointer.delete(ev.pointerId);
+        clearPressed(state.btn);
+        this._dispatch(EVT_RELEASE, { action: state.action });
+        return true;
+      };
+
+      // pointerdown: start a press for any D-pad button
+      root.addEventListener("pointerdown", (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
+        if (action === DPAD_8WAY_ACTIONS.MIC) return; // mic is a click toggle, not a press
+        this._pressed.add(action);
+        if (ev.pointerId !== null && ev.pointerId !== undefined) {
+          this._pressedByPointer.set(ev.pointerId, { action, btn });
+        }
+        btn.classList.add("is-pressed");
+        this._dispatch(EVT_PRESS, { action });
+        // Capture pointer so we still receive pointerup if the user
+        // drags off the button (common on touch).
+        if (
+          typeof btn.setPointerCapture === "function" &&
+          ev.pointerId !== null
+        ) {
+          try {
+            btn.setPointerCapture(ev.pointerId);
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      });
+
+      // pointerup / pointercancel: release the press
+      const release = (ev) => {
+        if (releaseByPointer(ev)) return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      };
+      root.addEventListener("pointerup", release);
+      root.addEventListener("pointercancel", release);
+
+      // pointerleave: clear if the pointer truly leaves the button
+      root.addEventListener("pointerleave", (ev) => {
+        if (releaseByPointer(ev)) return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      });
+
+      // click: toggle the mic button
+      root.addEventListener("click", (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (btn.getAttribute(DPAD_8WAY_DATA_ACTION) !== DPAD_8WAY_ACTIONS.MIC) return;
+        this._activeMic = !this._activeMic;
+        this._applyMicState();
+        this._dispatch(EVT_TOGGLE, {
+          action: DPAD_8WAY_ACTIONS.MIC,
+          active: this._activeMic,
+        });
+      });
+    }
+
+    _applyMicState() {
+      const root = this.shadowRoot;
+      if (!root) return;
+      const mic = root.querySelector("." + DPAD_8WAY_BTN_MIC);
+      if (!mic) return;
+      mic.classList.toggle("is-active", this._activeMic);
+      mic.setAttribute("aria-pressed", String(this._activeMic));
+    }
+
+    /**
+     * Dispatch a CustomEvent on the host with composed:true so it
+     * crosses the shadow DOM boundary. Listeners on the host (or
+     * any ancestor) will see it.
+     *
+     * @param {string} type
+     * @param {object} detail
+     */
+    _dispatch(type, detail) {
+      this.dispatchEvent(
+        new CustomEvent(type, {
+          detail: { ...detail, originalEvent: undefined },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  // Register the custom element. Guard against double-registration
+  // (e.g. if this module is imported more than once).
+  if (
+    typeof customElements !== "undefined" &&
+    !customElements.get("dpad-8way-control")
+  ) {
+    customElements.define("dpad-8way-control", Dpad8wayControl);
   }
 
   /**
@@ -1534,89 +2084,6 @@
   }
 
   /**
-   * icons.js
-   * ---------------------------------------------------------------
-   * Centralized dictionary of Material Design Icons (MDI) used by
-   * the card and its editor. We store *names*, not raw SVG paths,
-   * because Home Assistant ships <ha-icon> natively which resolves
-   * the MDI glyph set automatically. That keeps the card bundle
-   * tiny and ensures icons match the rest of the HA UI.
-   *
-   * If you ever need to render an SVG path manually, drop a path
-   * string into the SVG_PATHS map below and call `getIconPath()`.
-   * ---------------------------------------------------------------
-   */
-
-  // MDI icon *names* (used with <ha-icon icon="mdi:...">)
-  const ICON_NAMES = Object.freeze({
-    CARD: 'mdi:card-outline',
-    EDIT: 'mdi:pencil',
-    ALERT: 'mdi:alert-circle',
-    CHECK: 'mdi:check-circle',
-    HOME: 'mdi:home',
-    SETTINGS: 'mdi:cog',
-    REFRESH: 'mdi:refresh',
-    // Internal-card navigation arrows (used by the header nav
-    // buttons the factory renders to switch between views).
-    ARROW_RIGHT: 'mdi:chevron-right',
-    ARROW_LEFT: 'mdi:chevron-left',
-    // D-pad arrow icons (for the on-card touchpad). Distinct key
-    // names from the header nav arrows so consumers can tell them
-    // apart at a glance.
-    DPAD_UP: 'mdi:chevron-up',
-    DPAD_DOWN: 'mdi:chevron-down',
-    DPAD_LEFT: 'mdi:chevron-left',
-    DPAD_RIGHT: 'mdi:chevron-right',
-    // Microphone icons (off + on). The card toggles between these
-    // on the D-pad's center button.
-    MICROPHONE: 'mdi:microphone',
-    MICROPHONE_OFF: 'mdi:microphone-off',
-  });
-
-  // Inline SVG path data — only used if you need a fully offline
-  // render. The strings are deliberately simple to keep this
-  // module readable; expand as your card needs grow.
-  Object.freeze({
-    [ICON_NAMES.CARD]:
-      'M2 4h20v16H2z M4 8h16 M4 12h16 M4 16h10', // card outline
-    [ICON_NAMES.ALERT]:
-      'M12 2 L22 20 L2 20 Z M12 9v5 M12 17h.01', // triangle exclamation
-    [ICON_NAMES.CHECK]:
-      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M7 12l3 3 7-7', // circle check
-  });
-
-  /**
-   * Convenience accessor — return the MDI name for a logical key.
-   *
-   * @param {string} key
-   * @returns {string|undefined}
-   */
-  const getIcon = (key) => ICON_NAMES[key];
-
-  /**
-   * Render an <ha-icon> element for the given logical key.
-   * Returned as a raw string for easy template interpolation.
-   *
-   * @param {string} key
-   * @param {object} [opts]
-   * @param {string} [opts.className]
-   * @param {Record<string,string>} [opts.attrs] extra HTML attrs
-   *        (e.g. `{ 'data-card-nav': 'main' }`).
-   * @returns {string}
-   */
-  const renderIcon = (key, opts = {}) => {
-    const name = getIcon(key);
-    if (!name) return '';
-    const cls = opts.className ? ` class="${opts.className}"` : '';
-    const attrs = opts.attrs
-      ? ' ' + Object.entries(opts.attrs)
-          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '"')}"`)
-          .join(' ')
-      : '';
-    return `<ha-icon icon="${name}"${cls}${attrs}></ha-icon>`;
-  };
-
-  /**
    * factory.js
    * ---------------------------------------------------------------
    * Creational factory pattern.
@@ -1633,49 +2100,88 @@
    * function of its input — easy to test and easy to reason about.
    *
    * Note: the D-pad touchpad is a separate self-contained custom
-   * element (`<dpad-control>`) defined in dpad.js. The factory just
-   * drops a `<dpad-control>` element into the detail view's
-   * content area; it has no knowledge of the D-pad's internals.
+   * element. The 4-way <dpad-control> is defined in dpad.js; the
+   * 8-way <dpad-8way-control> is defined in dpad-8way.js. The
+   * factory just drops one of those elements into the relevant
+   * view's content area; it has no knowledge of the dpad internals.
    * ---------------------------------------------------------------
    */
 
 
-  // CSS class hook + data attribute for the header nav arrow
-  // buttons. The card wires up click handlers via event delegation
-  // on the host, using [data-card-nav="<target-view>"].
-  const NAV_CLASS = 'card-nav-arrow';
-  const NAV_DATA_TARGET = 'data-card-nav';
+  // Numeric page navigation rendered in the top-left of every
+  // card header. Three buttons labeled (1) (2) (3). The button
+  // for the current view is marked .is-active and is not clickable
+  // — you can't navigate to the page you're already on. The card
+  // wires up click handlers via event delegation on the host,
+  // using [data-page-nav="<view-id>"].
+  const PAGE_NAV_CLASS = 'card-page-nav';
+  const PAGE_NAV_ITEM_CLASS = 'card-page-nav__item';
+  const PAGE_NAV_DATA = 'data-page-nav';
+  // Index of each page in the 1-based nav. Used as the label.
+  const PAGE_NAV_INDEX = Object.freeze({
+    [LAYOUTS.MAIN]: 1,
+    [LAYOUTS.DETAIL]: 2,
+    [LAYOUTS.DETAIL_8WAY]: 3,
+  });
+  // Ordered list of view ids in the nav, for rendering left-to-right.
+  const PAGE_NAV_ORDER = [
+    LAYOUTS.MAIN,
+    LAYOUTS.DETAIL,
+    LAYOUTS.DETAIL_8WAY,
+  ];
 
   // ----------------------------------------------------------------
   // Section builders
   // ----------------------------------------------------------------
 
   /**
-   * Build a navigation arrow button for the header. The arrow points
-   * forward (right) on the main view, and back (left) on any other
-   * view. Clicking it asks the router to navigate to `targetView`.
+   * Build the numeric page-nav strip (1) (2) (3). Always rendered
+   * regardless of whether the current view has a title/subtitle, so
+   * the user always has a way to navigate between pages.
    *
-   * The button is rendered as a bare <ha-icon> wrapped in a <button>
-   * so it's keyboard-focusable and announces its role correctly.
+   * The button for the current view is marked .is-active and is not
+   * clickable (you can't navigate to the page you're on). The other
+   * two are real buttons; the card catches clicks via event
+   * delegation using [data-page-nav="<view-id>"].
    *
-   * @param {string} targetView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL
+   * @param {string} currentView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL | LAYOUTS.DETAIL_8WAY
    * @returns {string} raw HTML
    */
-  const buildNavArrow = (targetView) => {
-    const isBack = targetView === LAYOUTS.MAIN;
-    const iconKey = isBack ? 'ARROW_LEFT' : 'ARROW_RIGHT';
-    const label = isBack ? 'Back' : 'Next';
+  const buildPageNav = (currentView) => {
+    const items = PAGE_NAV_ORDER.map((view) => {
+      const isActive = view === currentView;
+      const index = PAGE_NAV_INDEX[view];
+      // Active page is a non-interactive label, not a button.
+      if (isActive) {
+        return (
+          '<span class="' + PAGE_NAV_ITEM_CLASS + ' ' + PAGE_NAV_ITEM_CLASS + '--active" ' +
+            'aria-current="page" aria-label="Current page (' + index + ')">' +
+            '(' + index + ')' +
+          '</span>'
+        );
+      }
+      return (
+        '<button type="button" class="' + PAGE_NAV_ITEM_CLASS + '" ' +
+          PAGE_NAV_DATA + '="' + escapeHtml$1(view) + '" ' +
+          'aria-label="Go to page ' + index + '">' +
+          '(' + index + ')' +
+        '</button>'
+      );
+    });
     return (
-      '<button type="button" class="' + NAV_CLASS + '" ' +
-        NAV_DATA_TARGET + '="' + escapeHtml$1(targetView) + '" ' +
-        'aria-label="' + label + '">' +
-        renderIcon(iconKey, { className: NAV_CLASS + '__icon' }) +
-      '</button>'
+      '<div class="' + PAGE_NAV_CLASS + '" role="navigation" ' +
+        'aria-label="Card pages">' +
+        items.join('') +
+      '</div>'
     );
   };
 
   /**
-   * Build the card header (title + subtitle + optional nav arrow).
+   * Build the card header (page nav + title + subtitle).
+   *
+   * The page nav is always rendered (top-left) so the user always
+   * has a way to switch between pages. The title/subtitle block is
+   * only rendered when at least one of them has content.
    *
    * @param {{title:string, subtitle:string, view:string}} vm
    * @returns {string} raw HTML
@@ -1683,28 +2189,16 @@
   const buildHeader = (vm) => {
     const hasTitle = Boolean(vm.title);
     const hasSubtitle = Boolean(vm.subtitle);
-    if (!hasTitle && !hasSubtitle) return '';
-
-    // Decide which arrow to show based on the current view:
-    //   - LAYOUTS.MAIN     -> right arrow pointing to LAYOUTS.DETAIL
-    //   - LAYOUTS.DETAIL   -> left arrow pointing back to LAYOUTS.MAIN
-    //   - LAYOUTS.SETTINGS -> left arrow pointing back to LAYOUTS.MAIN
-    //     (settings is reserved for future use; behaves like detail)
-    let navArrow = '';
-    if (vm.view === LAYOUTS.MAIN) {
-      navArrow = buildNavArrow(LAYOUTS.DETAIL);
-    } else if (vm.view === LAYOUTS.DETAIL || vm.view === LAYOUTS.SETTINGS) {
-      navArrow = buildNavArrow(LAYOUTS.MAIN);
-    }
-
     return (
       '<div class="' + REGIONS.HEADER + '">' +
         '<div class="' + REGIONS.HEADER + '__row">' +
-          '<div class="' + REGIONS.HEADER + '__text">' +
-            (hasTitle ? '<h2 class="' + REGIONS.TITLE + '">' + escapeHtml$1(vm.title) + '</h2>' : '') +
-            (hasSubtitle ? '<p class="' + REGIONS.SUBTITLE + '">' + escapeHtml$1(vm.subtitle) + '</p>' : '') +
-          '</div>' +
-          navArrow +
+          buildPageNav(vm.view) +
+          (hasTitle || hasSubtitle
+            ? '<div class="' + REGIONS.HEADER + '__text">' +
+                (hasTitle ? '<h2 class="' + REGIONS.TITLE + '">' + escapeHtml$1(vm.title) + '</h2>' : '') +
+                (hasSubtitle ? '<p class="' + REGIONS.SUBTITLE + '">' + escapeHtml$1(vm.subtitle) + '</p>' : '') +
+              '</div>'
+            : '') +
         '</div>' +
       '</div>'
     );
@@ -1728,25 +2222,35 @@
   };
 
   /**
-   * Build the D-pad + readout content area. Both the D-pad and the
-   * readout are implemented as their own self-contained custom
-   * elements (defined in dpad.js and readout.js respectively).
-   * The factory simply drops both elements into the content area
-   * and lets the consumer wire them up via:
+   * Build the 4-way D-pad + readout content area. Both the D-pad and
+   * the readout are self-contained custom elements (defined in
+   * dpad.js and readout.js respectively). The factory just drops
+   * both elements into the content area and lets the consumer wire
+   * them up via:
    *
    *   const dpad  = card.querySelector('dpad-control');
    *   const read  = card.querySelector('dpad-readout');
    *   read.subscribe(dpad);
-   *
-   * The card does NOT auto-subscribe them by default — that would
-   * couple the card to the dpad. Keeping it explicit makes the
-   * boilerplate a true reusable module pair.
    *
    * @returns {string} raw HTML
    */
   const buildDpadContent = () =>
     '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
       '<dpad-control></dpad-control>' +
+      '<dpad-readout></dpad-readout>' +
+    '</div>';
+
+  /**
+   * Build the 8-way D-pad + readout content area. Same shape as
+   * buildDpadContent but uses the 8-way custom element. The 8-way
+   * dpad is the next iteration; for now it renders the same 5
+   * buttons (it is a 1:1 clone of dpad.js with renamed internals).
+   *
+   * @returns {string} raw HTML
+   */
+  const buildDpad8wayContent = () =>
+    '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
+      '<dpad-8way-control></dpad-8way-control>' +
       '<dpad-readout></dpad-readout>' +
     '</div>';
 
@@ -1772,13 +2276,23 @@
   const buildCardHtml = (vm) => {
     switch (vm.view) {
       case LAYOUTS.DETAIL:
-        // Static secondary page: same header + footer as the main
-        // view, but the content area holds a <dpad-control>.
+        // Second page: 4-way D-pad view.
         return (
           '<ha-card>' +
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
               buildHeader(vm) +
               buildDpadContent() +
+              buildFooter(vm) +
+            '</div>' +
+          '</ha-card>'
+        );
+      case LAYOUTS.DETAIL_8WAY:
+        // Third page: 8-way D-pad view.
+        return (
+          '<ha-card>' +
+            '<div class="' + REGIONS.CARD_WRAPPER + '">' +
+              buildHeader(vm) +
+              buildDpad8wayContent() +
               buildFooter(vm) +
             '</div>' +
           '</ha-card>'
@@ -1932,38 +2446,64 @@
   }
 `;
 
-  // Header nav arrow button — used to switch between internal views.
+  // Header page-nav strip — three numeric buttons (1) (2) (3) in
+  // the top-left of the card header, used to switch between
+  // internal views. The active page is rendered as a non-button
+  // <span> with a distinct background; the other two are real
+  // buttons that fire dpad-press-like events handled by card.js.
   const navStyles = `
-  .card-nav-arrow {
+  .card-page-nav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 6px;
+  }
+
+  .card-page-nav__item {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
     margin: 0;
+    padding: 0;
     background: transparent;
-    border: none;
-    border-radius: 50%;
+    border: 1px solid var(--divider-color, transparent);
+    border-radius: 4px;
     color: var(--secondary-text-color);
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1;
     cursor: pointer;
-    transition: background-color 120ms ease, color 120ms ease;
+    transition: background-color 120ms ease, color 120ms ease,
+      border-color 120ms ease;
   }
 
-  .card-nav-arrow:hover,
-  .card-nav-arrow:focus-visible {
+  .card-page-nav__item:hover,
+  .card-page-nav__item:focus-visible {
     background: var(--divider-color, rgba(127, 127, 127, 0.12));
     color: var(--primary-text-color);
     outline: none;
   }
 
-  .card-nav-arrow:active {
+  .card-page-nav__item:active {
     background: var(--divider-color, rgba(127, 127, 127, 0.2));
   }
 
-  .card-nav-arrow__icon {
-    --mdc-icon-size: 24px;
+  .card-page-nav__item--active {
+    /* The current page is rendered as a <span> with this class.
+       Visually mark it as the selected item: filled background,
+       accent border, bold weight. Cursor is default (not a
+       button) since clicking it would be a no-op. */
+    background: var(--primary-color, #03a9f4);
+    border-color: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    font-weight: 600;
+    cursor: default;
   }
 `;
 
@@ -2217,15 +2757,18 @@
         const host = document.createElement("div");
         host.setAttribute("data-card-host", "");
 
-        // (1) Internal header-nav arrow click delegation.
-        //     Triggered by factory.js's <button data-card-nav="...">
-        //     elements in the header.
+        // (1) Internal page-nav click delegation.
+        //     Triggered by factory.js's <button data-page-nav="...">
+        //     elements in the header. The active page (the one
+        //     we're currently viewing) is rendered as a non-button
+        //     <span> and is not clickable, so the closest("[data-page-nav]")
+        //     check naturally filters it out.
         host.addEventListener("click", (ev) => {
           const target = ev.target;
           if (!(target instanceof Element)) return;
-          const btn = target.closest("[data-card-nav]");
+          const btn = target.closest("[data-page-nav]");
           if (!btn || !host.contains(btn)) return;
-          const view = btn.getAttribute("data-card-nav");
+          const view = btn.getAttribute("data-page-nav");
           if (view) this._router.navigate(view);
         });
 
@@ -2241,8 +2784,8 @@
           // chrome outside the dpad.)
           host.addEventListener("click", (ev) => {
             const target = ev.target;
-            if (target instanceof Element && target.closest("[data-card-nav]")) {
-              return; // nav arrow click — handled above
+            if (target instanceof Element && target.closest("[data-page-nav]")) {
+              return; // page nav click — handled above
             }
             this._controller.handleClick(this, ev);
           });

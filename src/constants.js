@@ -8,7 +8,7 @@
  */
 
 // ---------- Card identity ----------
-export const CARD_VERSION = "0.1.31";
+export const CARD_VERSION = "0.1.32";
 export const CARD_TYPE = "hass-vanilla-boilerplate-card";
 export const CARD_NAME = "HASS Vanilla Boilerplate Card";
 export const CARD_DESCRIPTION =
@@ -42,6 +42,8 @@ export const LAYOUTS = Object.freeze({
   MAIN: "main",
   // Reserved for future tabs/views added via router.js
   DETAIL: "detail",
+  // Third view: the 8-way dpad. See src/dpad-8way.js.
+  DETAIL_8WAY: "detail-8way",
   SETTINGS: "settings",
 });
 
