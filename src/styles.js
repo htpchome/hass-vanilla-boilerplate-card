@@ -109,6 +109,13 @@ export const cardStyles = `
     gap: 12px;
   }
 
+  /* Keep circle-pad.js portable: size it from the card layout,
+     not from the component's internal :host defaults. */
+  .card-content--dpad > circle-pad-control {
+    width: 100%;
+    align-self: stretch;
+  }
+
   .card-content p:first-child { margin-top: 0; }
   .card-content p:last-child  { margin-bottom: 0; }
 
@@ -207,9 +214,6 @@ export const statusStyles = `
  * Exported as a single tagged-template-friendly array of strings so
  * downstream code can `join('')` or stream into a <style> tag.
  */
-export const allStyles = [
-  baseStyles,
-  cardStyles,
-  navStyles,
-  statusStyles,
-].join('\n');
+export const allStyles = [baseStyles, cardStyles, navStyles, statusStyles].join(
+  "\n",
+);

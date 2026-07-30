@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.38";
+  const CARD_VERSION = "0.1.39";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2523,8 +2523,8 @@
      *     short-interval repeater so the log keeps growing while
      *     the user holds the button.
      *   - On dpad-release:          stop the repeater for that action.
-    *   - On *-toggle { action:'mic', active }: append
-    *     "[mic:on]" or "[mic:off]".
+     *   - On *-toggle { action:'mic', active }: append
+     *     "[mic:on]" or "[mic:off]".
      *
      * @param {HTMLElement} dpadEl   a <dpad-control>, <dpad-8way-control>, or <circle-pad-control> element
      * @param {object} [opts]
@@ -2571,9 +2571,7 @@
         RELEASE_EVENTS.forEach((evt) =>
           dpadEl.removeEventListener(evt, onRelease),
         );
-        TOGGLE_EVENTS.forEach((evt) =>
-          dpadEl.removeEventListener(evt, onToggle),
-        );
+        TOGGLE_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onToggle));
         this._stopAllRepeaters();
       };
       this._unsubscribers.push(off);
@@ -3153,6 +3151,13 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
+  }
+
+  /* Keep circle-pad.js portable: size it from the card layout,
+     not from the component's internal :host defaults. */
+  .card-content--dpad > circle-pad-control {
+    width: 100%;
+    align-self: stretch;
   }
 
   .card-content p:first-child { margin-top: 0; }
