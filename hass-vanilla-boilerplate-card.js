@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.28';
+  const CARD_VERSION = '0.1.30';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -529,89 +529,6 @@
   }
 
   /**
-   * icons.js
-   * ---------------------------------------------------------------
-   * Centralized dictionary of Material Design Icons (MDI) used by
-   * the card and its editor. We store *names*, not raw SVG paths,
-   * because Home Assistant ships <ha-icon> natively which resolves
-   * the MDI glyph set automatically. That keeps the card bundle
-   * tiny and ensures icons match the rest of the HA UI.
-   *
-   * If you ever need to render an SVG path manually, drop a path
-   * string into the SVG_PATHS map below and call `getIconPath()`.
-   * ---------------------------------------------------------------
-   */
-
-  // MDI icon *names* (used with <ha-icon icon="mdi:...">)
-  const ICON_NAMES = Object.freeze({
-    CARD: 'mdi:card-outline',
-    EDIT: 'mdi:pencil',
-    ALERT: 'mdi:alert-circle',
-    CHECK: 'mdi:check-circle',
-    HOME: 'mdi:home',
-    SETTINGS: 'mdi:cog',
-    REFRESH: 'mdi:refresh',
-    // Internal-card navigation arrows (used by the header nav
-    // buttons the factory renders to switch between views).
-    ARROW_RIGHT: 'mdi:chevron-right',
-    ARROW_LEFT: 'mdi:chevron-left',
-    // D-pad arrow icons (for the on-card touchpad). Distinct key
-    // names from the header nav arrows so consumers can tell them
-    // apart at a glance.
-    DPAD_UP: 'mdi:chevron-up',
-    DPAD_DOWN: 'mdi:chevron-down',
-    DPAD_LEFT: 'mdi:chevron-left',
-    DPAD_RIGHT: 'mdi:chevron-right',
-    // Microphone icons (off + on). The card toggles between these
-    // on the D-pad's center button.
-    MICROPHONE: 'mdi:microphone',
-    MICROPHONE_OFF: 'mdi:microphone-off',
-  });
-
-  // Inline SVG path data — only used if you need a fully offline
-  // render. The strings are deliberately simple to keep this
-  // module readable; expand as your card needs grow.
-  Object.freeze({
-    [ICON_NAMES.CARD]:
-      'M2 4h20v16H2z M4 8h16 M4 12h16 M4 16h10', // card outline
-    [ICON_NAMES.ALERT]:
-      'M12 2 L22 20 L2 20 Z M12 9v5 M12 17h.01', // triangle exclamation
-    [ICON_NAMES.CHECK]:
-      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M7 12l3 3 7-7', // circle check
-  });
-
-  /**
-   * Convenience accessor — return the MDI name for a logical key.
-   *
-   * @param {string} key
-   * @returns {string|undefined}
-   */
-  const getIcon = (key) => ICON_NAMES[key];
-
-  /**
-   * Render an <ha-icon> element for the given logical key.
-   * Returned as a raw string for easy template interpolation.
-   *
-   * @param {string} key
-   * @param {object} [opts]
-   * @param {string} [opts.className]
-   * @param {Record<string,string>} [opts.attrs] extra HTML attrs
-   *        (e.g. `{ 'data-card-nav': 'main' }`).
-   * @returns {string}
-   */
-  const renderIcon = (key, opts = {}) => {
-    const name = getIcon(key);
-    if (!name) return '';
-    const cls = opts.className ? ` class="${opts.className}"` : '';
-    const attrs = opts.attrs
-      ? ' ' + Object.entries(opts.attrs)
-          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '"')}"`)
-          .join(' ')
-      : '';
-    return `<ha-icon icon="${name}"${cls}${attrs}></ha-icon>`;
-  };
-
-  /**
    * dpad.js
    * ---------------------------------------------------------------
    * Reusable D-pad touchpad custom element: <dpad-control>
@@ -644,7 +561,6 @@
    * ---------------------------------------------------------------
    */
 
-
   // ----------------------------------------------------------------
   // Internal class hooks & data attributes (kept private to the module)
   // ----------------------------------------------------------------
@@ -669,6 +585,24 @@
   const EVT_PRESS = 'dpad-press';
   const EVT_RELEASE = 'dpad-release';
   const EVT_TOGGLE = 'dpad-toggle';
+
+  // Local icon map keeps this module self-contained so it can be
+  // copied into any HA card without importing project files.
+  const DPAD_ICON_NAMES = Object.freeze({
+    DPAD_UP: 'mdi:chevron-up',
+    DPAD_DOWN: 'mdi:chevron-down',
+    DPAD_LEFT: 'mdi:chevron-left',
+    DPAD_RIGHT: 'mdi:chevron-right',
+    MICROPHONE: 'mdi:microphone',
+    MICROPHONE_OFF: 'mdi:microphone-off',
+  });
+
+  const renderDpadIcon = (key, opts = {}) => {
+    const name = DPAD_ICON_NAMES[key];
+    if (!name) return '';
+    const cls = opts.className ? ' class="' + opts.className + '"' : '';
+    return '<ha-icon icon="' + name + '"' + cls + '></ha-icon>';
+  };
 
   // ----------------------------------------------------------------
   // Styles \u2014 self-contained, uses only HA design tokens for theming
@@ -824,11 +758,11 @@
    * @returns {string} raw HTML
    */
   const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
-    let inner = renderIcon(iconKey, {
+    let inner = renderDpadIcon(iconKey, {
       className: DPAD_BTN_CLASS + '__icon dpad__icon--default',
     });
     if (activeIconKey) {
-      inner += renderIcon(activeIconKey, {
+      inner += renderDpadIcon(activeIconKey, {
         className: DPAD_BTN_CLASS + '__icon dpad__icon--active',
       });
     }
@@ -902,6 +836,7 @@
       this.attachShadow({ mode: 'open' });
       // State: which buttons are currently pressed / active.
       this._pressed = new Set();
+      this._pressedByPointer = new Map();
       this._activeMic = false;
       // Guard against re-mounting the shadow content if the element
       // is moved or recycled in the DOM (e.g. when Home Assistant's
@@ -996,6 +931,16 @@
         btn.classList.remove('is-pressed');
       };
 
+      const releaseByPointer = (ev) => {
+        if (!ev || ev.pointerId === null || ev.pointerId === undefined) return false;
+        const state = this._pressedByPointer.get(ev.pointerId);
+        if (!state) return false;
+        this._pressedByPointer.delete(ev.pointerId);
+        clearPressed(state.btn);
+        this._dispatch(EVT_RELEASE, { action: state.action });
+        return true;
+      };
+
       // pointerdown: start a press for any D-pad button
       root.addEventListener('pointerdown', (ev) => {
         const btn = findBtn(ev.target);
@@ -1003,6 +948,9 @@
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         if (action === DPAD_ACTIONS.MIC) return; // mic is a click toggle, not a press
         this._pressed.add(action);
+        if (ev.pointerId !== null && ev.pointerId !== undefined) {
+          this._pressedByPointer.set(ev.pointerId, { action, btn });
+        }
         btn.classList.add('is-pressed');
         this._dispatch(EVT_PRESS, { action });
         // Capture pointer so we still receive pointerup if the user
@@ -1014,6 +962,7 @@
 
       // pointerup / pointercancel: release the press
       const release = (ev) => {
+        if (releaseByPointer(ev)) return;
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
@@ -1026,10 +975,13 @@
 
       // pointerleave: clear if the pointer truly leaves the button
       root.addEventListener('pointerleave', (ev) => {
+        if (releaseByPointer(ev)) return;
         const btn = findBtn(ev.target);
         if (!btn) return;
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        const action = btn.getAttribute(DPAD_DATA_ACTION);
         clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
       });
 
       // click: toggle the mic button
@@ -1537,6 +1489,89 @@
   if (typeof customElements !== 'undefined' && !customElements.get('dpad-readout')) {
     customElements.define('dpad-readout', DpadReadout);
   }
+
+  /**
+   * icons.js
+   * ---------------------------------------------------------------
+   * Centralized dictionary of Material Design Icons (MDI) used by
+   * the card and its editor. We store *names*, not raw SVG paths,
+   * because Home Assistant ships <ha-icon> natively which resolves
+   * the MDI glyph set automatically. That keeps the card bundle
+   * tiny and ensures icons match the rest of the HA UI.
+   *
+   * If you ever need to render an SVG path manually, drop a path
+   * string into the SVG_PATHS map below and call `getIconPath()`.
+   * ---------------------------------------------------------------
+   */
+
+  // MDI icon *names* (used with <ha-icon icon="mdi:...">)
+  const ICON_NAMES = Object.freeze({
+    CARD: 'mdi:card-outline',
+    EDIT: 'mdi:pencil',
+    ALERT: 'mdi:alert-circle',
+    CHECK: 'mdi:check-circle',
+    HOME: 'mdi:home',
+    SETTINGS: 'mdi:cog',
+    REFRESH: 'mdi:refresh',
+    // Internal-card navigation arrows (used by the header nav
+    // buttons the factory renders to switch between views).
+    ARROW_RIGHT: 'mdi:chevron-right',
+    ARROW_LEFT: 'mdi:chevron-left',
+    // D-pad arrow icons (for the on-card touchpad). Distinct key
+    // names from the header nav arrows so consumers can tell them
+    // apart at a glance.
+    DPAD_UP: 'mdi:chevron-up',
+    DPAD_DOWN: 'mdi:chevron-down',
+    DPAD_LEFT: 'mdi:chevron-left',
+    DPAD_RIGHT: 'mdi:chevron-right',
+    // Microphone icons (off + on). The card toggles between these
+    // on the D-pad's center button.
+    MICROPHONE: 'mdi:microphone',
+    MICROPHONE_OFF: 'mdi:microphone-off',
+  });
+
+  // Inline SVG path data — only used if you need a fully offline
+  // render. The strings are deliberately simple to keep this
+  // module readable; expand as your card needs grow.
+  Object.freeze({
+    [ICON_NAMES.CARD]:
+      'M2 4h20v16H2z M4 8h16 M4 12h16 M4 16h10', // card outline
+    [ICON_NAMES.ALERT]:
+      'M12 2 L22 20 L2 20 Z M12 9v5 M12 17h.01', // triangle exclamation
+    [ICON_NAMES.CHECK]:
+      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M7 12l3 3 7-7', // circle check
+  });
+
+  /**
+   * Convenience accessor — return the MDI name for a logical key.
+   *
+   * @param {string} key
+   * @returns {string|undefined}
+   */
+  const getIcon = (key) => ICON_NAMES[key];
+
+  /**
+   * Render an <ha-icon> element for the given logical key.
+   * Returned as a raw string for easy template interpolation.
+   *
+   * @param {string} key
+   * @param {object} [opts]
+   * @param {string} [opts.className]
+   * @param {Record<string,string>} [opts.attrs] extra HTML attrs
+   *        (e.g. `{ 'data-card-nav': 'main' }`).
+   * @returns {string}
+   */
+  const renderIcon = (key, opts = {}) => {
+    const name = getIcon(key);
+    if (!name) return '';
+    const cls = opts.className ? ` class="${opts.className}"` : '';
+    const attrs = opts.attrs
+      ? ' ' + Object.entries(opts.attrs)
+          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '"')}"`)
+          .join(' ')
+      : '';
+    return `<ha-icon icon="${name}"${cls}${attrs}></ha-icon>`;
+  };
 
   /**
    * factory.js

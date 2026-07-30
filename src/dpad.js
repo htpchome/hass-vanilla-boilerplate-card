@@ -31,32 +31,48 @@
  * ---------------------------------------------------------------
  */
 
-import { renderIcon } from './icons.js';
-
 // ----------------------------------------------------------------
 // Internal class hooks & data attributes (kept private to the module)
 // ----------------------------------------------------------------
 
-const DPAD_CLASS = 'dpad';
-const DPAD_BTN_CLASS = 'dpad__btn';
-const DPAD_BTN_UP = 'dpad__btn--up';
-const DPAD_BTN_DOWN = 'dpad__btn--down';
-const DPAD_BTN_LEFT = 'dpad__btn--left';
-const DPAD_BTN_RIGHT = 'dpad__btn--right';
-const DPAD_BTN_MIC = 'dpad__btn--mic';
-const DPAD_DATA_ACTION = 'data-dpad-action';
+const DPAD_CLASS = "dpad";
+const DPAD_BTN_CLASS = "dpad__btn";
+const DPAD_BTN_UP = "dpad__btn--up";
+const DPAD_BTN_DOWN = "dpad__btn--down";
+const DPAD_BTN_LEFT = "dpad__btn--left";
+const DPAD_BTN_RIGHT = "dpad__btn--right";
+const DPAD_BTN_MIC = "dpad__btn--mic";
+const DPAD_DATA_ACTION = "data-dpad-action";
 const DPAD_ACTIONS = Object.freeze({
-  UP: 'up',
-  DOWN: 'down',
-  LEFT: 'left',
-  RIGHT: 'right',
-  MIC: 'mic',
+  UP: "up",
+  DOWN: "down",
+  LEFT: "left",
+  RIGHT: "right",
+  MIC: "mic",
 });
 
 // Custom events dispatched on the host element.
-const EVT_PRESS = 'dpad-press';
-const EVT_RELEASE = 'dpad-release';
-const EVT_TOGGLE = 'dpad-toggle';
+const EVT_PRESS = "dpad-press";
+const EVT_RELEASE = "dpad-release";
+const EVT_TOGGLE = "dpad-toggle";
+
+// Local icon map keeps this module self-contained so it can be
+// copied into any HA card without importing project files.
+const DPAD_ICON_NAMES = Object.freeze({
+  DPAD_UP: "mdi:chevron-up",
+  DPAD_DOWN: "mdi:chevron-down",
+  DPAD_LEFT: "mdi:chevron-left",
+  DPAD_RIGHT: "mdi:chevron-right",
+  MICROPHONE: "mdi:microphone",
+  MICROPHONE_OFF: "mdi:microphone-off",
+});
+
+const renderDpadIcon = (key, opts = {}) => {
+  const name = DPAD_ICON_NAMES[key];
+  if (!name) return "";
+  const cls = opts.className ? ' class="' + opts.className + '"' : "";
+  return '<ha-icon icon="' + name + '"' + cls + "></ha-icon>";
+};
 
 // ----------------------------------------------------------------
 // Styles \u2014 self-contained, uses only HA design tokens for theming
@@ -212,22 +228,31 @@ const DPAD_STYLES = `
  * @returns {string} raw HTML
  */
 const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
-  let inner = renderIcon(iconKey, {
-    className: DPAD_BTN_CLASS + '__icon dpad__icon--default',
+  let inner = renderDpadIcon(iconKey, {
+    className: DPAD_BTN_CLASS + "__icon dpad__icon--default",
   });
   if (activeIconKey) {
-    inner += renderIcon(activeIconKey, {
-      className: DPAD_BTN_CLASS + '__icon dpad__icon--active',
+    inner += renderDpadIcon(activeIconKey, {
+      className: DPAD_BTN_CLASS + "__icon dpad__icon--active",
     });
   }
   return (
     '<button type="button" ' +
-      'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
-      DPAD_DATA_ACTION + '="' + action + '" ' +
-      'aria-label="' + label + '" ' +
-      'aria-pressed="false">' +
-      inner +
-    '</button>'
+    'class="' +
+    DPAD_BTN_CLASS +
+    " " +
+    extraClass +
+    '" ' +
+    DPAD_DATA_ACTION +
+    '="' +
+    action +
+    '" ' +
+    'aria-label="' +
+    label +
+    '" ' +
+    'aria-pressed="false">' +
+    inner +
+    "</button>"
   );
 };
 
@@ -236,10 +261,25 @@ const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
  * @returns {string} raw HTML
  */
 const buildDpadHtml = () => {
-  const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, 'DPAD_UP', 'Up');
-  const down = buildButtonHtml(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, 'DPAD_DOWN', 'Down');
-  const left = buildButtonHtml(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, 'DPAD_LEFT', 'Left');
-  const right = buildButtonHtml(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, 'DPAD_RIGHT', 'Right');
+  const up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
+  const down = buildButtonHtml(
+    DPAD_ACTIONS.DOWN,
+    DPAD_BTN_DOWN,
+    "DPAD_DOWN",
+    "Down",
+  );
+  const left = buildButtonHtml(
+    DPAD_ACTIONS.LEFT,
+    DPAD_BTN_LEFT,
+    "DPAD_LEFT",
+    "Left",
+  );
+  const right = buildButtonHtml(
+    DPAD_ACTIONS.RIGHT,
+    DPAD_BTN_RIGHT,
+    "DPAD_RIGHT",
+    "Right",
+  );
   // Mic button icon swap:
   //   - default (off): show mdi:microphone-off
   //   - active  (on):  show mdi:microphone (recording in progress)
@@ -247,9 +287,9 @@ const buildDpadHtml = () => {
   const mic = buildButtonHtml(
     DPAD_ACTIONS.MIC,
     DPAD_BTN_MIC,
-    'MICROPHONE_OFF',
-    'Toggle microphone',
-    'MICROPHONE',
+    "MICROPHONE_OFF",
+    "Toggle microphone",
+    "MICROPHONE",
   );
   // Each button is a direct grid child. The grid is 3x3 and each
   // button uses its own `grid-area` to position itself:
@@ -261,9 +301,15 @@ const buildDpadHtml = () => {
   // No slot wrappers \u2014 putting multiple buttons in one grid cell
   // would cause them to overlap (the bug we just fixed).
   return (
-    '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
-      up + left + mic + right + down +
-    '</div>'
+    '<div class="' +
+    DPAD_CLASS +
+    '" role="group" aria-label="D-pad control">' +
+    up +
+    left +
+    mic +
+    right +
+    down +
+    "</div>"
   );
 };
 
@@ -287,9 +333,10 @@ const buildDpadHtml = () => {
 class DpadControl extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     // State: which buttons are currently pressed / active.
     this._pressed = new Set();
+    this._pressedByPointer = new Map();
     this._activeMic = false;
     // Guard against re-mounting the shadow content if the element
     // is moved or recycled in the DOM (e.g. when Home Assistant's
@@ -359,10 +406,10 @@ class DpadControl extends HTMLElement {
     if (this._mounted) return;
     this._mounted = true;
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = DPAD_STYLES;
 
-    const host = document.createElement('div');
+    const host = document.createElement("div");
     host.innerHTML = buildDpadHtml();
 
     this.shadowRoot.appendChild(style);
@@ -374,34 +421,58 @@ class DpadControl extends HTMLElement {
     if (!root) return;
 
     const findBtn = (target) =>
-      target instanceof Element ? target.closest('[' + DPAD_DATA_ACTION + ']') : null;
+      target instanceof Element
+        ? target.closest("[" + DPAD_DATA_ACTION + "]")
+        : null;
 
     const clearPressed = (btn) => {
       if (!btn) return;
       const action = btn.getAttribute(DPAD_DATA_ACTION);
       if (!this._pressed.has(action)) return;
       this._pressed.delete(action);
-      btn.classList.remove('is-pressed');
+      btn.classList.remove("is-pressed");
+    };
+
+    const releaseByPointer = (ev) => {
+      if (!ev || ev.pointerId === null || ev.pointerId === undefined)
+        return false;
+      const state = this._pressedByPointer.get(ev.pointerId);
+      if (!state) return false;
+      this._pressedByPointer.delete(ev.pointerId);
+      clearPressed(state.btn);
+      this._dispatch(EVT_RELEASE, { action: state.action });
+      return true;
     };
 
     // pointerdown: start a press for any D-pad button
-    root.addEventListener('pointerdown', (ev) => {
+    root.addEventListener("pointerdown", (ev) => {
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(DPAD_DATA_ACTION);
       if (action === DPAD_ACTIONS.MIC) return; // mic is a click toggle, not a press
       this._pressed.add(action);
-      btn.classList.add('is-pressed');
+      if (ev.pointerId !== null && ev.pointerId !== undefined) {
+        this._pressedByPointer.set(ev.pointerId, { action, btn });
+      }
+      btn.classList.add("is-pressed");
       this._dispatch(EVT_PRESS, { action });
       // Capture pointer so we still receive pointerup if the user
       // drags off the button (common on touch).
-      if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
-        try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+      if (
+        typeof btn.setPointerCapture === "function" &&
+        ev.pointerId !== null
+      ) {
+        try {
+          btn.setPointerCapture(ev.pointerId);
+        } catch (_e) {
+          /* ignore */
+        }
       }
     });
 
     // pointerup / pointercancel: release the press
     const release = (ev) => {
+      if (releaseByPointer(ev)) return;
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(DPAD_DATA_ACTION);
@@ -409,19 +480,22 @@ class DpadControl extends HTMLElement {
       clearPressed(btn);
       this._dispatch(EVT_RELEASE, { action });
     };
-    root.addEventListener('pointerup', release);
-    root.addEventListener('pointercancel', release);
+    root.addEventListener("pointerup", release);
+    root.addEventListener("pointercancel", release);
 
     // pointerleave: clear if the pointer truly leaves the button
-    root.addEventListener('pointerleave', (ev) => {
+    root.addEventListener("pointerleave", (ev) => {
+      if (releaseByPointer(ev)) return;
       const btn = findBtn(ev.target);
       if (!btn) return;
       if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+      const action = btn.getAttribute(DPAD_DATA_ACTION);
       clearPressed(btn);
+      this._dispatch(EVT_RELEASE, { action });
     });
 
     // click: toggle the mic button
-    root.addEventListener('click', (ev) => {
+    root.addEventListener("click", (ev) => {
       const btn = findBtn(ev.target);
       if (!btn) return;
       if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
@@ -437,10 +511,10 @@ class DpadControl extends HTMLElement {
   _applyMicState() {
     const root = this.shadowRoot;
     if (!root) return;
-    const mic = root.querySelector('.' + DPAD_BTN_MIC);
+    const mic = root.querySelector("." + DPAD_BTN_MIC);
     if (!mic) return;
-    mic.classList.toggle('is-active', this._activeMic);
-    mic.setAttribute('aria-pressed', String(this._activeMic));
+    mic.classList.toggle("is-active", this._activeMic);
+    mic.setAttribute("aria-pressed", String(this._activeMic));
   }
 
   /**
@@ -464,8 +538,11 @@ class DpadControl extends HTMLElement {
 
 // Register the custom element. Guard against double-registration
 // (e.g. if this module is imported more than once).
-if (typeof customElements !== 'undefined' && !customElements.get('dpad-control')) {
-  customElements.define('dpad-control', DpadControl);
+if (
+  typeof customElements !== "undefined" &&
+  !customElements.get("dpad-control")
+) {
+  customElements.define("dpad-control", DpadControl);
 }
 
 export { DpadControl, DPAD_ACTIONS, EVT_PRESS, EVT_RELEASE, EVT_TOGGLE };
