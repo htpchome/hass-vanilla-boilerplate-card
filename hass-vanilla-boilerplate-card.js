@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = '0.1.27';
+  const CARD_VERSION = '0.1.28';
   const CARD_TYPE = 'hass-vanilla-boilerplate-card';
   const CARD_NAME = 'HASS Vanilla Boilerplate Card';
   const CARD_DESCRIPTION =
@@ -903,6 +903,13 @@
       // State: which buttons are currently pressed / active.
       this._pressed = new Set();
       this._activeMic = false;
+      // Guard against re-mounting the shadow content if the element
+      // is moved or recycled in the DOM (e.g. when Home Assistant's
+      // card editor re-parents the live card during dialog open/
+      // close). Without this, each connectedCallback appends another
+      // <style> + <div class="dpad"> to the shadow root, which
+      // stacks the dpad UI on top of itself.
+      this._mounted = false;
     }
 
     // ---- lifecycle ----
@@ -916,6 +923,11 @@
       // Best-effort: clear any pressed state when the element is
       // removed from the DOM so we don't leak listeners.
       this._pressed.clear();
+      // Do NOT reset _mounted here. The element is still the same
+      // instance; on re-connection we want _mount to be a no-op.
+      // If the element is genuinely destroyed (GC), the flag goes
+      // with it. If HA ever does a true element replace, the new
+      // element gets a fresh _mounted=false in its constructor.
     }
 
     // ---- public API ----
@@ -949,6 +961,16 @@
     // ---- internals ----
 
     _mount() {
+      // Idempotent: only build the shadow content once per element
+      // instance. connectedCallback can fire multiple times if the
+      // element is moved in the DOM (e.g. by Home Assistant's card
+      // editor re-parenting the live card during dialog open/close);
+      // without this guard, each re-connection would append another
+      // <style> + <div class="dpad"> to the same shadow root, which
+      // visually stacks the dpad UI on top of itself.
+      if (this._mounted) return;
+      this._mounted = true;
+
       const style = document.createElement('style');
       style.textContent = DPAD_STYLES;
 
@@ -1266,6 +1288,13 @@
       this._repeaters = new Map();
       this._unsubscribers = [];
       this._format = DEFAULT_FORMAT;
+      // Guard against re-mounting the shadow content if the element
+      // is moved or recycled in the DOM (e.g. when Home Assistant's
+      // card editor re-parents the live card during dialog open/
+      // close). Without this, each connectedCallback appends another
+      // <style> + readout frame to the shadow root, which stacks
+      // the activity log on top of itself.
+      this._mounted = false;
     }
 
     // ---- lifecycle ----
@@ -1282,6 +1311,11 @@
       });
       this._unsubscribers = [];
       this._stopAllRepeaters();
+      // Do NOT reset _mounted here. The element is still the same
+      // instance; on re-connection we want _mount to be a no-op.
+      // If the element is genuinely destroyed (GC), the flag goes
+      // with it. If HA ever does a true element replace, the new
+      // element gets a fresh _mounted=false in its constructor.
     }
 
     // ---- public API ----
@@ -1406,6 +1440,16 @@
     }
 
     _mount() {
+      // Idempotent: only build the shadow content once per element
+      // instance. connectedCallback can fire multiple times if the
+      // element is moved in the DOM (e.g. by Home Assistant's card
+      // editor re-parenting the live card during dialog open/close);
+      // without this guard, each re-connection would append another
+      // <style> + readout frame to the same shadow root, which
+      // visually stacks the activity log on top of itself.
+      if (this._mounted) return;
+      this._mounted = true;
+
       const style = document.createElement('style');
       style.textContent = READOUT_STYLES;
 
