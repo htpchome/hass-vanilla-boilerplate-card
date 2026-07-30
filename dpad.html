@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>D-pad Control - Standalone Demo</title>
+  <style>
+    /* ================================================================
+       Page chrome (purely for the demo page; not part of the dpad
+       custom element itself). Kept minimal and uses system fonts
+       so the file looks fine in any browser with no extra setup.
+       ================================================================ */
+    :root {
+      color-scheme: light dark;
+
+      /* Page chrome tokens. */
+      --page-bg: #f5f5f7;
+      --page-fg: #1a1a1a;
+      --panel-bg: #ffffff;
+      --panel-border: #d8d8dc;
+      --muted: #6b6b70;
+      --accent: #03a9f4;
+      --success: #2e7d32;
+      --log-bg: #1a1a1a;
+      --log-fg: #e6e6e6;
+
+      /* Home Assistant design tokens. These are the SAME names HA
+         uses, with sensible browser-friendly defaults. Override any
+         of them on :root, on the dpad-control, or on any ancestor
+         and the change propagates to every dpad in scope. Inside
+         Home Assistant these are provided automatically and win
+         via specificity; here we provide defaults so the dpad is
+         fully usable in any browser without HA. */
+      --primary-background-color: #fafafa;
+      --secondary-background-color: #e5e5e5;
+      --primary-text-color: #141414;
+      --secondary-text-color: #5e5e5e;
+      --disabled-text-color: #bdbdbd;
+      --text-primary-color: #ffffff;
+      --divider-color: rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page-bg: #161618;
+        --page-fg: #e6e6e8;
+        --panel-bg: #1f1f22;
+        --panel-border: #2c2c30;
+        --muted: #9a9a9e;
+        --log-bg: #0e0e10;
+        --log-fg: #d6d6d8;
+        --primary-background-color: #141416;
+        --secondary-background-color: #1f1f22;
+        --primary-text-color: #f1f1f3;
+        --secondary-text-color: #a8a8ac;
+        --disabled-text-color: #4a4a4e;
+        --text-primary-color: #ffffff;
+        --divider-color: #2c2c30;
+      }
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--page-bg);
+      color: var(--page-fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 4px;
+      font-weight: 600;
+    }
+
+    .lede {
+      color: var(--muted);
+      margin: 0 0 24px;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 0 0 24px;
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+
+    .panel .desc {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin: 0 0 16px;
+    }
+
+    .stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      flex: 1 1 280px;
+      min-width: 280px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 12px;
+      flex-wrap: wrap;
+    }
+
+    button.tool {
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border: 1px solid var(--panel-border);
+      background: transparent;
+      color: inherit;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button.tool:hover {
+      border-color: var(--accent);
+    }
+
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      background: var(--log-bg);
+      color: var(--log-fg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-height: 120px;
+      max-height: 220px;
+      overflow-y: auto;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log .line {
+      display: block;
+      padding: 1px 0;
+    }
+
+    .log .ts {
+      color: #888;
+    }
+
+    .log .ev-press {
+      color: #82b1ff;
+    }
+
+    .log .ev-release {
+      color: #c5e478;
+    }
+
+    .log .ev-toggle {
+      color: #ffb74d;
+    }
+
+    .log .ev-empty {
+      color: #888;
+      font-style: italic;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(127, 127, 127, 0.15);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+  </style>
+  <style>
+    /* ================================================================
+       Layout custom properties for the dpad (size + icon sizes).
+       Colors are NOT defined here — they are pulled from the HA
+       design tokens (--secondary-background-color etc.) which are
+       defined on :root above (and overridden by Home Assistant
+       itself when this card runs in HA). Override any of those
+       tokens at any level (page, ancestor, this element) and every
+       dpad in scope re-themes automatically. See the "Theming"
+       section in the README/comments for the full token list.
+       ================================================================ */
+    dpad-control {
+      display: block;
+      --dpad-size: 220px;
+      --dpad-arrow-icon-size: 42px;
+      --dpad-mic-size: 96px;
+      --dpad-mic-icon-size: 54px;
+    }
+  </style>
+  <script>
+    /* ================================================================
+       <dpad-control> - a self-contained D-pad touchpad custom
+       element. Refactored from src/dpad.js so it can be opened
+       directly in any browser via this file (no build step, no
+       imports).
+
+       The dpad renders as a 3x3 grid:
+
+              [ ^ ]
+        [ < ]  [ mic ]  [ > ]
+              [ v ]
+
+       Public API:
+         - setActive(action, active)  programmatically toggle a button
+         - getState()                 returns { mic: boolean }
+         - addEventListener('dpad-press',   fn) { action }
+         - addEventListener('dpad-release', fn) { action }
+         - addEventListener('dpad-toggle',  fn) { action, active }
+
+       All events bubble and are composed, so consumers in any
+       shadow root can listen to them.
+       ================================================================ */
+    (function () {
+      'use strict';
+
+      // Internal class hooks & data attributes.
+      var DPAD_CLASS = 'dpad';
+      var DPAD_BTN_CLASS = 'dpad__btn';
+      var DPAD_BTN_UP = 'dpad__btn--up';
+      var DPAD_BTN_DOWN = 'dpad__btn--down';
+      var DPAD_BTN_LEFT = 'dpad__btn--left';
+      var DPAD_BTN_RIGHT = 'dpad__btn--right';
+      var DPAD_BTN_MIC = 'dpad__btn--mic';
+      var DPAD_DATA_ACTION = 'data-dpad-action';
+      var DPAD_ACTIONS = Object.freeze({
+        UP: 'up', DOWN: 'down', LEFT: 'left', RIGHT: 'right', MIC: 'mic',
+      });
+      var EVT_PRESS = 'dpad-press';
+      var EVT_RELEASE = 'dpad-release';
+      var EVT_TOGGLE = 'dpad-toggle';
+
+      // Inline SVG icon set. Using a single chevron and rotating
+      // it per direction keeps the file small and consistent with
+      // the Material chevron look. The mic on/off pair comes from
+      // Material's volume-up / volume-off icons.
+      var SVG_CHEVRON =
+        '<svg viewBox="0 0 24 24" fill="currentColor">' +
+        '<path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>' +
+        '</svg>';
+      var SVG_VOL_ON =
+        '<svg viewBox="0 0 24 24" fill="currentColor">' +
+        '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>' +
+        '</svg>';
+      var SVG_VOL_OFF =
+        '<svg viewBox="0 0 24 24" fill="currentColor">' +
+        '<path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' +
+        '</svg>';
+
+      // Direction icons. Same chevron SVG, rotated per direction.
+      // Default chevron points DOWN. CSS rotation: positive =
+      // clockwise. So rotating a down-pointing chevron:
+      //   - 180deg flips it to point UP
+      //   - +90deg (clockwise) makes it point LEFT
+      //   - -90deg (counter-clockwise) makes it point RIGHT
+      var DPAD_ICONS = Object.freeze({
+        up: { svg: SVG_CHEVRON, rot: 180 },
+        down: { svg: SVG_CHEVRON, rot: 0 },
+        left: { svg: SVG_CHEVRON, rot: 90 },
+        right: { svg: SVG_CHEVRON, rot: -90 },
+        mic_on: SVG_VOL_ON,
+        mic_off: SVG_VOL_OFF,
+      });
+
+      // Visual styles. Applied inside the shadow root. The :host
+      // block aliases the standard Home Assistant design tokens
+      // (defined on :root in the page or by HA itself) to the
+      // dpad-internal names used below. Override ANY of those
+      // HA tokens on :root, on the dpad-control, or on any
+      // ancestor and the change propagates to every dpad.
+      var DPAD_STYLES = '\n' +
+        '  :host {\n' +
+        '    --dpad-bg-1: var(--secondary-background-color);\n' +
+        '    --dpad-bg-2: var(--primary-background-color);\n' +
+        '    --dpad-text-1: var(--primary-text-color);\n' +
+        '    --dpad-text-2: var(--secondary-text-color);\n' +
+        '    --dpad-text-3: var(--disabled-text-color);\n' +
+        '    --dpad-text-4: var(--text-primary-color);\n' +
+        '  }\n' +
+        '  .' + DPAD_CLASS + ' {\n' +
+        '    position: relative;\n' +
+        '    display: grid;\n' +
+        '    grid-template-columns: repeat(3, 1fr);\n' +
+        '    grid-template-rows: repeat(3, 1fr);\n' +
+        '    column-gap: 0;\n' +
+        '    row-gap: 0;\n' +
+        '    width: var(--dpad-size);\n' +
+        '    height: var(--dpad-size);\n' +
+        '    max-width: 100%;\n' +
+        '    aspect-ratio: 1 / 1;\n' +
+        '    border-radius: 50%;\n' +
+        '    background-image:\n' +
+        '      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),\n' +
+        '      radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);\n' +
+        '    border: 1px solid var(--dpad-text-3);\n' +
+        '    box-shadow: inset 0 0 12px var(--dpad-text-3);\n' +
+        '    overflow: hidden;\n' +
+        '    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,\n' +
+        '                 "Helvetica Neue", Arial, sans-serif;\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_CLASS + ' {\n' +
+        '    position: relative;\n' +
+        '    display: inline-flex;\n' +
+        '    align-items: center;\n' +
+        '    justify-content: center;\n' +
+        '    width: 100%;\n' +
+        '    height: 100%;\n' +
+        '    padding: 0;\n' +
+        '    margin: 0;\n' +
+        '    background: transparent;\n' +
+        '    color: var(--dpad-text-2);\n' +
+        '    border: none;\n' +
+        '    border-radius: 0;\n' +
+        '    cursor: pointer;\n' +
+        '    font: inherit;\n' +
+        '    font-size: var(--dpad-arrow-icon-size);\n' +
+        '    line-height: 1;\n' +
+        '    transition: color 80ms ease, transform 80ms ease;\n' +
+        '    user-select: none;\n' +
+        '    -webkit-tap-highlight-color: transparent;\n' +
+        '    touch-action: manipulation;\n' +
+        '  }\n' +
+        '  @media (hover: hover) {\n' +
+        '    .' + DPAD_BTN_CLASS + ':hover { color: var(--dpad-text-1); }\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_CLASS + ':focus-visible {\n' +
+        '    outline: 2px solid var(--accent, #03a9f4);\n' +
+        '    outline-offset: -4px;\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_UP + '    { grid-area: 1 / 2; }\n' +
+        '  .' + DPAD_BTN_DOWN + '  { grid-area: 3 / 2; }\n' +
+        '  .' + DPAD_BTN_LEFT + '  { grid-area: 2 / 1; }\n' +
+        '  .' + DPAD_BTN_RIGHT + ' { grid-area: 2 / 3; }\n' +
+        '  .' + DPAD_BTN_MIC + ' {\n' +
+        '    grid-area: 2 / 2;\n' +
+        '    width: var(--dpad-mic-size);\n' +
+        '    height: var(--dpad-mic-size);\n' +
+        '    align-self: center;\n' +
+        '    justify-self: center;\n' +
+        '    margin: auto;\n' +
+        '    font-size: var(--dpad-mic-icon-size);\n' +
+        '    background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);\n' +
+        '    border: 1px solid var(--dpad-text-1);\n' +
+        '    border-radius: 50%;\n' +
+        '    color: var(--dpad-text-2);\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_CLASS + '.is-pressed {\n' +
+        '    color: var(--dpad-text-1);\n' +
+        '    transform: scale(0.92);\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_MIC + '.is-active {\n' +
+        '    box-shadow:\n' +
+        '      inset 0 0 0 2px var(--success, #2e7d32),\n' +
+        '      inset 0 0 12px var(--success, #2e7d32);\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_MIC + ' .dpad__icon--active { display: none; }\n' +
+        '  .' + DPAD_BTN_MIC + '.is-active .dpad__icon--default { display: none; }\n' +
+        '  .' + DPAD_BTN_MIC + '.is-active .dpad__icon--active  { display: inline-flex; }\n' +
+        // Icon span: sizes the inline SVG inside each button. The
+        // arrow buttons use --dpad-arrow-icon-size; the mic
+        // button uses --dpad-mic-icon-size (defined on the
+        // .dpad__btn--mic block above).
+        '  .' + DPAD_BTN_CLASS + '__icon {\n' +
+        '    display: inline-flex;\n' +
+        '    align-items: center;\n' +
+        '    justify-content: center;\n' +
+        '    width: var(--dpad-arrow-icon-size);\n' +
+        '    height: var(--dpad-arrow-icon-size);\n' +
+        '    line-height: 0;\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_MIC + ' .' + DPAD_BTN_CLASS + '__icon {\n' +
+        '    width: var(--dpad-mic-icon-size);\n' +
+        '    height: var(--dpad-mic-icon-size);\n' +
+        '  }\n' +
+        '  .' + DPAD_BTN_CLASS + '__icon svg {\n' +
+        '    width: 100%;\n' +
+        '    height: 100%;\n' +
+        '    display: block;\n' +
+        '    pointer-events: none;\n' +
+        '  }\n' +
+        '';
+
+      // Render an icon entry (either {svg, rot} for chevrons, or a
+      // plain SVG string for the mic) wrapped in a span with the
+      // right CSS class. The optional rotation is applied inline so
+      // each direction gets the right orientation.
+      function renderIconSpan(svg, rot, kindClass) {
+        var transform = '';
+        if (rot) {
+          transform = ' style="transform: rotate(' + rot + 'deg)"';
+        }
+        return (
+          '<span class="' + DPAD_BTN_CLASS + '__icon ' + kindClass + '" aria-hidden="true"' +
+          transform + '>' + svg + '</span>'
+        );
+      }
+
+      function buildButtonHtml(action, extraClass, icon, label, activeIcon) {
+        // icon and activeIcon can be either { svg, rot } or a plain
+        // SVG string. Normalize so we always know what to render.
+        var defaultSpan = icon && icon.svg
+          ? renderIconSpan(icon.svg, icon.rot, 'dpad__icon--default')
+          : (icon ? renderIconSpan(icon, 0, 'dpad__icon--default') : '');
+        var activeSpan = activeIcon && activeIcon.svg
+          ? renderIconSpan(activeIcon.svg, activeIcon.rot, 'dpad__icon--active')
+          : (activeIcon ? renderIconSpan(activeIcon, 0, 'dpad__icon--active') : '');
+        return (
+          '<button type="button" ' +
+          'class="' + DPAD_BTN_CLASS + ' ' + extraClass + '" ' +
+          DPAD_DATA_ACTION + '="' + action + '" ' +
+          'aria-label="' + label + '" ' +
+          'aria-pressed="false">' +
+          defaultSpan + activeSpan +
+          '</button>'
+        );
+      }
+
+      function buildDpadHtml() {
+        var up = buildButtonHtml(DPAD_ACTIONS.UP, DPAD_BTN_UP, DPAD_ICONS.up, 'Up');
+        var down = buildButtonHtml(DPAD_ACTIONS.DOWN, DPAD_BTN_DOWN, DPAD_ICONS.down, 'Down');
+        var left = buildButtonHtml(DPAD_ACTIONS.LEFT, DPAD_BTN_LEFT, DPAD_ICONS.left, 'Left');
+        var right = buildButtonHtml(DPAD_ACTIONS.RIGHT, DPAD_BTN_RIGHT, DPAD_ICONS.right, 'Right');
+        // Mic: glyph swaps default <-> active via CSS.
+        var mic = buildButtonHtml(DPAD_ACTIONS.MIC, DPAD_BTN_MIC,
+          DPAD_ICONS.mic_off, 'Toggle microphone',
+          DPAD_ICONS.mic);
+        return (
+          '<div class="' + DPAD_CLASS + '" role="group" aria-label="D-pad control">' +
+          up + left + mic + right + down +
+          '</div>'
+        );
+      }
+
+      function DpadControl() {
+        var self = Reflect.construct(HTMLElement, [], new.target || DpadControl);
+        self.attachShadow({ mode: 'open' });
+        self._pressed = new Set();
+        self._pressedByPointer = new Map();
+        self._activeMic = false;
+        // Guard against re-mounting if connectedCallback fires
+        // more than once (e.g. when the element is moved in the
+        // DOM). See the equivalent guard in src/dpad.js.
+        self._mounted = false;
+        return self;
+      }
+      DpadControl.prototype = Object.create(HTMLElement.prototype);
+      DpadControl.prototype.constructor = DpadControl;
+
+      DpadControl.prototype.connectedCallback = function () {
+        this._mount();
+        this._wirePointerEvents();
+      };
+
+      DpadControl.prototype.disconnectedCallback = function () {
+        this._pressed.clear();
+        // Do NOT reset _mounted here.
+      };
+
+      DpadControl.prototype.setActive = function (action, active) {
+        if (action === DPAD_ACTIONS.MIC) {
+          this._activeMic = Boolean(active);
+          this._applyMicState();
+        }
+      };
+
+      DpadControl.prototype.getState = function () {
+        return { mic: this._activeMic };
+      };
+
+      DpadControl.prototype._mount = function () {
+        // Idempotent: only build the shadow content once per
+        // element instance. connectedCallback can fire multiple
+        // times if the element is moved in the DOM; without this
+        // guard, each re-connection would append another <style>
+        // + <div class="dpad"> to the same shadow root, which
+        // visually stacks the dpad UI on top of itself.
+        if (this._mounted) return;
+        this._mounted = true;
+
+        var style = document.createElement('style');
+        style.textContent = DPAD_STYLES;
+
+        var host = document.createElement('div');
+        host.innerHTML = buildDpadHtml();
+
+        this.shadowRoot.appendChild(style);
+        this.shadowRoot.appendChild(host.firstElementChild);
+      };
+
+      DpadControl.prototype._wirePointerEvents = function () {
+        var root = this.shadowRoot;
+        if (!root) return;
+
+        var findBtn = function (target) {
+          return target instanceof Element
+            ? target.closest('[' + DPAD_DATA_ACTION + ']')
+            : null;
+        };
+
+        var clearPressed = function (btn) {
+          if (!btn) return;
+          var action = btn.getAttribute(DPAD_DATA_ACTION);
+          if (!this._pressed.has(action)) return;
+          this._pressed.delete(action);
+          btn.classList.remove('is-pressed');
+        }.bind(this);
+
+        var releaseByPointer = function (ev) {
+          if (!ev || ev.pointerId === null || ev.pointerId === undefined) return false;
+          var state = this._pressedByPointer.get(ev.pointerId);
+          if (!state) return false;
+          this._pressedByPointer.delete(ev.pointerId);
+          clearPressed(state.btn);
+          this._dispatch(EVT_RELEASE, { action: state.action });
+          return true;
+        }.bind(this);
+
+        // pointerdown: start a press for any D-pad button.
+        root.addEventListener('pointerdown', function (ev) {
+          var btn = findBtn(ev.target);
+          if (!btn) return;
+          var action = btn.getAttribute(DPAD_DATA_ACTION);
+          if (action === DPAD_ACTIONS.MIC) return; // mic is a click toggle
+          this._pressed.add(action);
+          if (ev.pointerId !== null && ev.pointerId !== undefined) {
+            this._pressedByPointer.set(ev.pointerId, { action: action, btn: btn });
+          }
+          btn.classList.add('is-pressed');
+          this._dispatch(EVT_PRESS, { action: action });
+          // Capture the pointer so we still get pointerup if the
+          // user drags off the button (common on touch screens).
+          if (typeof btn.setPointerCapture === 'function' && ev.pointerId !== null) {
+            try { btn.setPointerCapture(ev.pointerId); } catch (_e) { /* ignore */ }
+          }
+        }.bind(this));
+
+        // pointerup / pointercancel: release the press.
+        var release = function (ev) {
+          if (releaseByPointer(ev)) return;
+          var btn = findBtn(ev.target);
+          if (!btn) return;
+          var action = btn.getAttribute(DPAD_DATA_ACTION);
+          if (!this._pressed.has(action)) return;
+          clearPressed(btn);
+          this._dispatch(EVT_RELEASE, { action: action });
+        }.bind(this);
+        root.addEventListener('pointerup', release);
+        root.addEventListener('pointercancel', release);
+
+        // pointerleave: clear pressed state if the pointer truly
+        // leaves the button (handled by pointerId map first).
+        root.addEventListener('pointerleave', function (ev) {
+          if (releaseByPointer(ev)) return;
+          var btn = findBtn(ev.target);
+          if (!btn) return;
+          if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+          var action = btn.getAttribute(DPAD_DATA_ACTION);
+          clearPressed(btn);
+          this._dispatch(EVT_RELEASE, { action: action });
+        }.bind(this));
+
+        // click: toggle the mic button.
+        root.addEventListener('click', function (ev) {
+          var btn = findBtn(ev.target);
+          if (!btn) return;
+          if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
+          this._activeMic = !this._activeMic;
+          this._applyMicState();
+          this._dispatch(EVT_TOGGLE, {
+            action: DPAD_ACTIONS.MIC,
+            active: this._activeMic,
+          });
+        }.bind(this));
+      };
+
+      DpadControl.prototype._applyMicState = function () {
+        var root = this.shadowRoot;
+        if (!root) return;
+        var mic = root.querySelector('.' + DPAD_BTN_MIC);
+        if (!mic) return;
+        mic.classList.toggle('is-active', this._activeMic);
+        mic.setAttribute('aria-pressed', String(this._activeMic));
+      };
+
+      DpadControl.prototype._dispatch = function (type, detail) {
+        var payload = {};
+        for (var k in detail) payload[k] = detail[k];
+        this.dispatchEvent(new CustomEvent(type, {
+          detail: payload,
+          bubbles: true,
+          composed: true,
+        }));
+      };
+
+      // Register the custom element. Guard against double-registration
+      // (e.g. if this script is included more than once).
+      if (typeof customElements !== 'undefined' && !customElements.get('dpad-control')) {
+        customElements.define('dpad-control', DpadControl);
+      }
+
+      // Expose for the demo page (and for any external script that
+      // wants to interact with the element directly).
+      window.DpadControl = DpadControl;
+      window.DPAD_ACTIONS = DPAD_ACTIONS;
+    })();
+  </script>
+</head>
+
+<body>
+  <main>
+    <h1>D-pad Control</h1>
+    <p class="lede">
+      Standalone demo of the <code><dpad-control></code> custom element.
+      Open this file directly in any browser — no server, no build, no imports.
+      Press a directional button to fire <code>dpad-press</code> / <code>dpad-release</code>;
+      tap the center mic to toggle <code>dpad-toggle</code>.
+    </p>
+
+    <section class="panel">
+      <h2>Live</h2>
+      <p class="desc">Click and hold a direction button; tap the center to toggle the mic.</p>
+      <div class="stage">
+        <dpad-control id="dpad-primary"></dpad-control>
+      </div>
+      <div class="controls">
+        <button class="tool" id="btn-clear">Clear log</button>
+        <button class="tool" id="btn-mic-on">Set mic ON</button>
+        <button class="tool" id="btn-mic-off">Set mic OFF</button>
+        <button class="tool" id="btn-mic-toggle">setActive('mic', !state)</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Event log</h2>
+      <p class="desc">Every <code>dpad-press</code>, <code>dpad-release</code>, and <code>dpad-toggle</code> shows up
+        here with a timestamp.</p>
+      <pre class="log" id="log" aria-live="polite"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Multiple instances</h2>
+      <p class="desc">Each <code><dpad-control></code> is fully independent; the same element is rendered below at three
+        sizes via CSS custom properties.</p>
+      <div class="row">
+        <div class="col stage" style="flex-direction:column; gap:8px;">
+          <dpad-control
+            style="--dpad-size:140px; --dpad-arrow-icon-size:26px; --dpad-mic-size:64px; --dpad-mic-icon-size:36px;"></dpad-control>
+          <span class="muted" style="color:var(--muted); font-size:0.8rem;">140px</span>
+        </div>
+        <div class="col stage" style="flex-direction:column; gap:8px;">
+          <dpad-control
+            style="--dpad-size:200px; --dpad-arrow-icon-size:38px; --dpad-mic-size:88px; --dpad-mic-icon-size:50px;"></dpad-control>
+          <span class="muted" style="color:var(--muted); font-size:0.8rem;">200px</span>
+        </div>
+        <div class="col stage" style="flex-direction:column; gap:8px;">
+          <dpad-control
+            style="--dpad-size:260px; --dpad-arrow-icon-size:50px; --dpad-mic-size:110px; --dpad-mic-icon-size:62px;"></dpad-control>
+          <span class="muted" style="color:var(--muted); font-size:0.8rem;">260px</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ================================================================
+    // Demo wiring. Listens to the primary dpad's events and writes
+    // them into the on-screen log. Also exposes programmatic
+    // setActive() via the toolbar buttons.
+    // ================================================================
+    (function () {
+      'use strict';
+      var logEl = document.getElementById('log');
+      var dpad = document.getElementById('dpad-primary');
+
+      function ts() {
+        var d = new Date();
+        function pad(n) { return n < 10 ? '0' + n : '' + n; }
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + pad(d.getMilliseconds());
+      }
+
+      function appendLine(text, kind) {
+        var span = document.createElement('span');
+        span.className = 'line ev-' + kind;
+        var tsSpan = document.createElement('span');
+        tsSpan.className = 'ts';
+        tsSpan.textContent = '[' + ts() + '] ';
+        span.appendChild(tsSpan);
+        span.appendChild(document.createTextNode(text));
+        // Remove the empty-state hint if present.
+        var empty = logEl.querySelector('.ev-empty');
+        if (empty) empty.remove();
+        logEl.appendChild(span);
+        // Auto-scroll to bottom.
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      // Initial empty-state hint.
+      var emptyHint = document.createElement('span');
+      emptyHint.className = 'line ev-empty';
+      emptyHint.textContent = 'No events yet. Try a button.';
+      logEl.appendChild(emptyHint);
+
+      // Listeners are on the host element. Events are composed:true
+      // and bubbles:true, so they cross the shadow boundary.
+      dpad.addEventListener('dpad-press', function (ev) {
+        appendLine('dpad-press   action=' + (ev.detail && ev.detail.action), 'press');
+      });
+      dpad.addEventListener('dpad-release', function (ev) {
+        appendLine('dpad-release action=' + (ev.detail && ev.detail.action), 'release');
+      });
+      dpad.addEventListener('dpad-toggle', function (ev) {
+        var d = ev.detail || {};
+        appendLine('dpad-toggle  action=' + d.action + ' active=' + d.active, 'toggle');
+      });
+
+      // Toolbar.
+      document.getElementById('btn-clear').addEventListener('click', function () {
+        logEl.innerHTML = '';
+        var hint = document.createElement('span');
+        hint.className = 'line ev-empty';
+        hint.textContent = 'Cleared.';
+        logEl.appendChild(hint);
+      });
+      document.getElementById('btn-mic-on').addEventListener('click', function () {
+        dpad.setActive('mic', true);
+      });
+      document.getElementById('btn-mic-off').addEventListener('click', function () {
+        dpad.setActive('mic', false);
+      });
+      document.getElementById('btn-mic-toggle').addEventListener('click', function () {
+        var s = dpad.getState();
+        dpad.setActive('mic', !s.mic);
+      });
+    })();
+  </script>
+</body>
+
+</html>
