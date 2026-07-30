@@ -37,6 +37,7 @@ import { CardController } from "./controller.js";
 // element used by the third (8-way) view.
 import "./dpad.js";
 import "./dpad-8way.js";
+import "./circle-pad.js";
 import "./readout.js";
 import { buildCardHtml } from "./factory.js";
 import { renderErrorMessage, warnOnce } from "./helpers.js";
@@ -344,7 +345,9 @@ class HassVanillaBoilerplateCard extends HTMLElement {
    */
   _wireDpadReadout(host) {
     if (!host) return;
-    const dpad = host.querySelector("dpad-control, dpad-8way-control");
+    const dpad = host.querySelector(
+      "dpad-control, dpad-8way-control, circle-pad-control",
+    );
     const readout = host.querySelector("dpad-readout");
     if (!dpad || !readout) return;
 

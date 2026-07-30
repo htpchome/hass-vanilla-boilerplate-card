@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.34";
+  const CARD_VERSION = "0.1.35";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -31,6 +31,8 @@
     DETAIL: "detail",
     // Third view: the 8-way dpad. See src/dpad-8way.js.
     DETAIL_8WAY: "detail-8way",
+    // Fourth view: the circle pad. See src/circle-pad.js.
+    DETAIL_CIRCLE: "detail-circle",
     SETTINGS: "settings",
   });
 
@@ -584,9 +586,9 @@
   });
 
   // Custom events dispatched on the host element.
-  const EVT_PRESS$1 = "dpad-press";
-  const EVT_RELEASE$1 = "dpad-release";
-  const EVT_TOGGLE$1 = "dpad-toggle";
+  const EVT_PRESS$2 = "dpad-press";
+  const EVT_RELEASE$2 = "dpad-release";
+  const EVT_TOGGLE$2 = "dpad-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -599,7 +601,7 @@
     MICROPHONE_OFF: "mdi:microphone-off",
   });
 
-  const renderDpadIcon$1 = (key, opts = {}) => {
+  const renderDpadIcon$2 = (key, opts = {}) => {
     const name = DPAD_ICON_NAMES[key];
     if (!name) return "";
     const cls = opts.className ? ' class="' + opts.className + '"' : "";
@@ -759,12 +761,12 @@
    * @param {string} [activeIconKey] optional alt icon for toggles
    * @returns {string} raw HTML
    */
-  const buildButtonHtml$1 = (action, extraClass, iconKey, label, activeIconKey) => {
-    let inner = renderDpadIcon$1(iconKey, {
+  const buildButtonHtml$2 = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderDpadIcon$2(iconKey, {
       className: DPAD_BTN_CLASS + "__icon dpad__icon--default",
     });
     if (activeIconKey) {
-      inner += renderDpadIcon$1(activeIconKey, {
+      inner += renderDpadIcon$2(activeIconKey, {
         className: DPAD_BTN_CLASS + "__icon dpad__icon--active",
       });
     }
@@ -792,21 +794,21 @@
    * Render the full D-pad markup.
    * @returns {string} raw HTML
    */
-  const buildDpadHtml$1 = () => {
-    const up = buildButtonHtml$1(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
-    const down = buildButtonHtml$1(
+  const buildDpadHtml$2 = () => {
+    const up = buildButtonHtml$2(DPAD_ACTIONS.UP, DPAD_BTN_UP, "DPAD_UP", "Up");
+    const down = buildButtonHtml$2(
       DPAD_ACTIONS.DOWN,
       DPAD_BTN_DOWN,
       "DPAD_DOWN",
       "Down",
     );
-    const left = buildButtonHtml$1(
+    const left = buildButtonHtml$2(
       DPAD_ACTIONS.LEFT,
       DPAD_BTN_LEFT,
       "DPAD_LEFT",
       "Left",
     );
-    const right = buildButtonHtml$1(
+    const right = buildButtonHtml$2(
       DPAD_ACTIONS.RIGHT,
       DPAD_BTN_RIGHT,
       "DPAD_RIGHT",
@@ -816,7 +818,7 @@
     //   - default (off): show mdi:microphone-off
     //   - active  (on):  show mdi:microphone (recording in progress)
     // The first iconKey is the default; the second is the active.
-    const mic = buildButtonHtml$1(
+    const mic = buildButtonHtml$2(
       DPAD_ACTIONS.MIC,
       DPAD_BTN_MIC,
       "MICROPHONE_OFF",
@@ -942,7 +944,7 @@
       style.textContent = DPAD_STYLES;
 
       const host = document.createElement("div");
-      host.innerHTML = buildDpadHtml$1();
+      host.innerHTML = buildDpadHtml$2();
 
       this.shadowRoot.appendChild(style);
       this.shadowRoot.appendChild(host.firstElementChild);
@@ -972,7 +974,7 @@
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE$1, { action: state.action });
+        this._dispatch(EVT_RELEASE$2, { action: state.action });
         return true;
       };
 
@@ -987,7 +989,7 @@
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS$1, { action });
+        this._dispatch(EVT_PRESS$2, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
         if (
@@ -1010,7 +1012,7 @@
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$1, { action });
+        this._dispatch(EVT_RELEASE$2, { action });
       };
       root.addEventListener("pointerup", release);
       root.addEventListener("pointercancel", release);
@@ -1023,7 +1025,7 @@
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$1, { action });
+        this._dispatch(EVT_RELEASE$2, { action });
       });
 
       // click: toggle the mic button
@@ -1033,7 +1035,7 @@
         if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE$1, {
+        this._dispatch(EVT_TOGGLE$2, {
           action: DPAD_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1140,9 +1142,9 @@
   // Custom events dispatched on the host element. Use 8way-infixed
   // event names so a single page can have both a <dpad-control>
   // and a <dpad-8way-control> without event name collisions.
-  const EVT_PRESS = "dpad-8way-press";
-  const EVT_RELEASE = "dpad-8way-release";
-  const EVT_TOGGLE = "dpad-8way-toggle";
+  const EVT_PRESS$1 = "dpad-8way-press";
+  const EVT_RELEASE$1 = "dpad-8way-release";
+  const EVT_TOGGLE$1 = "dpad-8way-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -1156,7 +1158,7 @@
     MICROPHONE_OFF: "mdi:microphone-off",
   });
 
-  const renderDpadIcon = (key, opts = {}) => {
+  const renderDpadIcon$1 = (key, opts = {}) => {
     const name = DPAD_8WAY_ICON_NAMES[key];
     if (!name) return "";
     const cls = opts.className ? ' class="' + opts.className + '"' : "";
@@ -1353,12 +1355,12 @@
    * @param {string} [activeIconKey] optional alt icon for toggles
    * @returns {string} raw HTML
    */
-  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
-    let inner = renderDpadIcon(iconKey, {
+  const buildButtonHtml$1 = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderDpadIcon$1(iconKey, {
       className: DPAD_8WAY_BTN_CLASS + "__icon dpad-8way__icon--default",
     });
     if (activeIconKey) {
-      inner += renderDpadIcon(activeIconKey, {
+      inner += renderDpadIcon$1(activeIconKey, {
         className: DPAD_8WAY_BTN_CLASS + "__icon dpad-8way__icon--active",
       });
     }
@@ -1386,50 +1388,50 @@
    * Render the full D-pad markup.
    * @returns {string} raw HTML
    */
-  const buildDpadHtml = () => {
-    const upLeft = buildButtonHtml(
+  const buildDpadHtml$1 = () => {
+    const upLeft = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.UP_LEFT,
       DPAD_8WAY_BTN_UP_LEFT,
       "DPAD_DIAGONAL",
       "Up-left",
     );
-    const up = buildButtonHtml(
+    const up = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.UP,
       DPAD_8WAY_BTN_UP,
       "DPAD_UP",
       "Up",
     );
-    const upRight = buildButtonHtml(
+    const upRight = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.UP_RIGHT,
       DPAD_8WAY_BTN_UP_RIGHT,
       "DPAD_DIAGONAL",
       "Up-right",
     );
-    const down = buildButtonHtml(
+    const down = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.DOWN,
       DPAD_8WAY_BTN_DOWN,
       "DPAD_DOWN",
       "Down",
     );
-    const downLeft = buildButtonHtml(
+    const downLeft = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.DOWN_LEFT,
       DPAD_8WAY_BTN_DOWN_LEFT,
       "DPAD_DIAGONAL",
       "Down-left",
     );
-    const downRight = buildButtonHtml(
+    const downRight = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.DOWN_RIGHT,
       DPAD_8WAY_BTN_DOWN_RIGHT,
       "DPAD_DIAGONAL",
       "Down-right",
     );
-    const left = buildButtonHtml(
+    const left = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.LEFT,
       DPAD_8WAY_BTN_LEFT,
       "DPAD_LEFT",
       "Left",
     );
-    const right = buildButtonHtml(
+    const right = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.RIGHT,
       DPAD_8WAY_BTN_RIGHT,
       "DPAD_RIGHT",
@@ -1439,7 +1441,7 @@
     //   - default (off): show mdi:microphone-off
     //   - active  (on):  show mdi:microphone (recording in progress)
     // The first iconKey is the default; the second is the active.
-    const mic = buildButtonHtml(
+    const mic = buildButtonHtml$1(
       DPAD_8WAY_ACTIONS.MIC,
       DPAD_8WAY_BTN_MIC,
       "MICROPHONE_OFF",
@@ -1575,7 +1577,7 @@
       style.textContent = DPAD_8WAY_STYLES;
 
       const host = document.createElement("div");
-      host.innerHTML = buildDpadHtml();
+      host.innerHTML = buildDpadHtml$1();
 
       this.shadowRoot.appendChild(style);
       this.shadowRoot.appendChild(host.firstElementChild);
@@ -1605,7 +1607,7 @@
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE, { action: state.action });
+        this._dispatch(EVT_RELEASE$1, { action: state.action });
         return true;
       };
 
@@ -1620,7 +1622,7 @@
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS, { action });
+        this._dispatch(EVT_PRESS$1, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
         if (
@@ -1643,7 +1645,7 @@
         const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       };
       root.addEventListener("pointerup", release);
       root.addEventListener("pointercancel", release);
@@ -1656,7 +1658,7 @@
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       });
 
       // click: toggle the mic button
@@ -1667,7 +1669,7 @@
           return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE, {
+        this._dispatch(EVT_TOGGLE$1, {
           action: DPAD_8WAY_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1712,6 +1714,640 @@
   }
 
   /**
+   * circle-pad.js
+   * ---------------------------------------------------------------
+   * Reusable D-pad touchpad custom element: <circle-pad-control>
+   *
+   * Drop this element into any HTML (or shadow root) and it will
+   * render a circle-pad touchpad with center mic:
+   *
+   *   [ ↖ ] [ ▲ ] [ ↗ ]
+   *   [ ◄ ] [ 🎙 ] [ ► ]
+   *   [ ↙ ] [ ▼ ] [ ↘ ]
+   *
+   * (Currently a 1:1 clone of dpad.js with renamed internals so
+   * the two dpad elements can coexist on the same page without
+   * colliding. The circle-pad layout — 4 cardinals + 4 diagonals + 1
+   * mic — is the next iteration. Names are namespaced with the
+   * `circle` infix throughout: custom-element tag, root class,
+   * button BEM modifiers, data attribute, event names, exports.)
+   *
+   * The element is fully self-contained:
+   *   - Shadow DOM for style isolation
+   *   - Native HA design tokens (auto-themes light/dark/custom)
+   *   - Owns its own pointer event handling (mouse + touch)
+   *   - Dispatches standard CustomEvents that bubble+compose, so
+   *     consumers in any shadow root can listen for them.
+   *
+   * No coupling to card.js, controller.js, or any other module in
+   * this project — you can copy this file into another project and
+   * use <circle-pad-control> as-is.
+   * ---------------------------------------------------------------
+   */
+
+  // ----------------------------------------------------------------
+  // Internal class hooks & data attributes (kept private to the module)
+  // ----------------------------------------------------------------
+
+  const CIRCLE_PAD_CLASS = "circle-pad";
+  const CIRCLE_PAD_BTN_CLASS = "circle-pad__btn";
+  const CIRCLE_PAD_BTN_UP = "circle-pad__btn--up";
+  const CIRCLE_PAD_BTN_DOWN = "circle-pad__btn--down";
+  const CIRCLE_PAD_BTN_LEFT = "circle-pad__btn--left";
+  const CIRCLE_PAD_BTN_RIGHT = "circle-pad__btn--right";
+  const CIRCLE_PAD_BTN_UP_LEFT = "circle-pad__btn--up-left";
+  const CIRCLE_PAD_BTN_UP_RIGHT = "circle-pad__btn--up-right";
+  const CIRCLE_PAD_BTN_DOWN_LEFT = "circle-pad__btn--down-left";
+  const CIRCLE_PAD_BTN_DOWN_RIGHT = "circle-pad__btn--down-right";
+  const CIRCLE_PAD_BTN_MIC = "circle-pad__btn--mic";
+  const CIRCLE_PAD_DATA_ACTION = "data-circle-pad-action";
+  const CIRCLE_PAD_ACTIONS = Object.freeze({
+    UP: "up",
+    UP_LEFT: "up-left",
+    UP_RIGHT: "up-right",
+    DOWN: "down",
+    DOWN_LEFT: "down-left",
+    DOWN_RIGHT: "down-right",
+    LEFT: "left",
+    RIGHT: "right",
+    MIC: "mic",
+  });
+
+  // Custom events dispatched on the host element. Use circle-infixed
+  // event names so a single page can have both a <dpad-control>
+  // and a <circle-pad-control> without event name collisions.
+  const EVT_PRESS = "circle-pad-press";
+  const EVT_RELEASE = "circle-pad-release";
+  const EVT_TOGGLE = "circle-pad-toggle";
+
+  // Local icon map keeps this module self-contained so it can be
+  // copied into any HA card without importing project files.
+  const CIRCLE_PAD_ICON_NAMES = Object.freeze({
+    DPAD_UP: "mdi:chevron-up",
+    DPAD_DOWN: "mdi:chevron-down",
+    DPAD_LEFT: "mdi:chevron-left",
+    DPAD_RIGHT: "mdi:chevron-right",
+    DPAD_DIAGONAL: "mdi:chevron-up",
+    MICROPHONE: "mdi:microphone",
+    MICROPHONE_OFF: "mdi:microphone-off",
+  });
+
+  const renderDpadIcon = (key, opts = {}) => {
+    const name = CIRCLE_PAD_ICON_NAMES[key];
+    if (!name) return "";
+    const cls = opts.className ? ' class="' + opts.className + '"' : "";
+    return '<ha-icon icon="' + name + '"' + cls + "></ha-icon>";
+  };
+
+  // ----------------------------------------------------------------
+  // Styles — self-contained, uses only HA design tokens for theming
+  // ----------------------------------------------------------------
+
+  // Visual design matches the reference image:
+  //   - Four arrow icons at the cardinal points (transparent
+  //     backgrounds; just the icon shows on the plate).
+  //   - Four diagonal "spoke" lines connecting the center disc to
+  //     each arrow icon (rendered as a single CSS background using
+  //     repeating-linear-gradient on the .dpad container).
+  //   - A darker raised disc in the center holding the mic button.
+  //
+  // The colors are intentionally dark (not theme-aware) to match
+  // the reference. If you want the D-pad to follow the active HA
+  // theme, swap the gradient stops and the icon color to use
+  // HA design tokens (--primary-text-color, --secondary-background-color, etc.).
+  const CIRCLE_PAD_STYLES = `
+  :host {
+    display: block;
+    --dpad-size: 220px;
+    --dpad-arrow-icon-size: 42px;   /* 150% larger than original 28px */
+    --dpad-arrow-diag-icon-size: 24px;
+    --dpad-mic-size: 96px;          /* 150% larger than original 64px */
+    --dpad-mic-icon-size: 54px;     /* 150% larger than original 36px */
+    --dpad-bg-1: var(--secondary-background-color);
+    --dpad-bg-2: var(--primary-background-color);
+    --dpad-text-1: var(--primary-text-color);
+    --dpad-text-2: var(--secondary-text-color);
+    --dpad-text-3: var(--disabled-text-color);
+    --dpad-text-4: var(--text-primary-color);
+  }
+
+  .${CIRCLE_PAD_CLASS} {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    column-gap: 0;
+    row-gap: 0;
+    width: var(--dpad-size);
+    height: var(--dpad-size);
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    /* Plate gradient (no decorative overlay). */
+    /* background: radial-gradient(circle at top left, #202020 15%, #303030 100%); */
+    background-image:
+      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+      radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
+    border: 1px solid var(--dpad-text-3);
+    box-shadow: inset 0 0 12px var(--dpad-text-3);
+    overflow: hidden;
+  }
+
+  .${CIRCLE_PAD_BTN_CLASS} {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: var(--dpad-text-2); /* muted icon color */
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: color 80ms ease, transform 80ms ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Hover effect is scoped to devices with a real pointing
+     device (mouse, trackpad, stylus). On touch screens the
+     hover state would otherwise stick after a tap because the
+     finger remains over the button at the last tap location
+     until the user touches elsewhere. The press state is still
+     driven by the is-pressed class (JS), which works correctly
+     on both touch and mouse. */
+  @media (hover: hover) {
+    .${CIRCLE_PAD_BTN_CLASS}:hover {
+      color: var(--dpad-text-1);
+    }
+  }
+
+  .${CIRCLE_PAD_BTN_CLASS}:focus-visible {
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: -4px;
+  }
+
+  .${CIRCLE_PAD_BTN_CLASS} ha-icon {
+    --mdc-icon-size: var(--dpad-arrow-icon-size);
+    pointer-events: none;
+  }
+
+  .${CIRCLE_PAD_BTN_UP}    { grid-area: 1 / 2; }
+  .${CIRCLE_PAD_BTN_UP_LEFT} {
+    grid-area: 1 / 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+  }
+  .${CIRCLE_PAD_BTN_UP_RIGHT} {
+    grid-area: 1 / 3;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+  }
+  .${CIRCLE_PAD_BTN_DOWN}  { grid-area: 3 / 2; }
+  .${CIRCLE_PAD_BTN_DOWN_LEFT} {
+    grid-area: 3 / 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+  .${CIRCLE_PAD_BTN_DOWN_RIGHT} {
+    grid-area: 3 / 3;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  .${CIRCLE_PAD_BTN_LEFT}  { grid-area: 2 / 1; }
+  .${CIRCLE_PAD_BTN_RIGHT} { grid-area: 2 / 3; }
+  .${CIRCLE_PAD_BTN_MIC}   {
+    grid-area: 2 / 2;
+    width: var(--dpad-mic-size);
+    height: var(--dpad-mic-size);
+    align-self: center;
+    justify-self: center;
+    margin: auto;
+    /* The raised dark disc around the mic. */
+    background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
+    border: 1px solid var(--dpad-text-1);
+    border-radius: 50%;
+    color: var(--dpad-text-2);
+  }
+
+  .${CIRCLE_PAD_BTN_MIC} ha-icon {
+    --mdc-icon-size: var(--dpad-mic-icon-size);
+  }
+
+  .${CIRCLE_PAD_BTN_UP_LEFT} ha-icon,
+  .${CIRCLE_PAD_BTN_UP_RIGHT} ha-icon,
+  .${CIRCLE_PAD_BTN_DOWN_LEFT} ha-icon,
+  .${CIRCLE_PAD_BTN_DOWN_RIGHT} ha-icon {
+    --mdc-icon-size: var(--dpad-arrow-diag-icon-size);
+  }
+
+  .${CIRCLE_PAD_BTN_UP_LEFT} ha-icon { transform: rotate(-45deg); }
+  .${CIRCLE_PAD_BTN_UP_RIGHT} ha-icon { transform: rotate(45deg); }
+  .${CIRCLE_PAD_BTN_DOWN_LEFT} ha-icon { transform: rotate(-135deg); }
+  .${CIRCLE_PAD_BTN_DOWN_RIGHT} ha-icon { transform: rotate(135deg); }
+
+  /* Momentary pressed state for arrow buttons — just brighten
+     the icon, no background change (the plate is the background). */
+  .${CIRCLE_PAD_BTN_CLASS}.is-pressed {
+    color: var(--dpad-text-1);
+    transform: scale(0.92);
+  }
+
+  /* Mic toggle: when active, show a subtle green ring around
+     the central disc. (Background stays dark per the reference.) */
+  .${CIRCLE_PAD_BTN_MIC}.is-active {
+    box-shadow:
+      inset 0 0 0 2px var(--success-color),
+      inset 0 0 12px var(--success-color);
+  }
+
+  /* Mic icon swap: hide default when active, show "off" icon. */
+  .${CIRCLE_PAD_BTN_MIC} .circle-pad__icon--active { display: none; }
+  .${CIRCLE_PAD_BTN_MIC}.is-active .circle-pad__icon--default { display: none; }
+  .${CIRCLE_PAD_BTN_MIC}.is-active .circle-pad__icon--active  { display: inline-flex; }
+`;
+
+  // ----------------------------------------------------------------
+  // DOM construction
+  // ----------------------------------------------------------------
+
+  /**
+   * Build the inner DOM tree for a D-pad button.
+   *
+   * @param {string} action     one of CIRCLE_PAD_ACTIONS.*
+   * @param {string} extraClass BEM modifier
+   * @param {string} iconKey    key into ICON_NAMES (default icon)
+   * @param {string} label      aria-label
+   * @param {string} [activeIconKey] optional alt icon for toggles
+   * @returns {string} raw HTML
+   */
+  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
+    let inner = renderDpadIcon(iconKey, {
+      className: CIRCLE_PAD_BTN_CLASS + "__icon circle-pad__icon--default",
+    });
+    if (activeIconKey) {
+      inner += renderDpadIcon(activeIconKey, {
+        className: CIRCLE_PAD_BTN_CLASS + "__icon circle-pad__icon--active",
+      });
+    }
+    return (
+      '<button type="button" ' +
+      'class="' +
+      CIRCLE_PAD_BTN_CLASS +
+      " " +
+      extraClass +
+      '" ' +
+      CIRCLE_PAD_DATA_ACTION +
+      '="' +
+      action +
+      '" ' +
+      'aria-label="' +
+      label +
+      '" ' +
+      'aria-pressed="false">' +
+      inner +
+      "</button>"
+    );
+  };
+
+  /**
+   * Render the full D-pad markup.
+   * @returns {string} raw HTML
+   */
+  const buildDpadHtml = () => {
+    const upLeft = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.UP_LEFT,
+      CIRCLE_PAD_BTN_UP_LEFT,
+      "DPAD_DIAGONAL",
+      "Up-left",
+    );
+    const up = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.UP,
+      CIRCLE_PAD_BTN_UP,
+      "DPAD_UP",
+      "Up",
+    );
+    const upRight = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.UP_RIGHT,
+      CIRCLE_PAD_BTN_UP_RIGHT,
+      "DPAD_DIAGONAL",
+      "Up-right",
+    );
+    const down = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.DOWN,
+      CIRCLE_PAD_BTN_DOWN,
+      "DPAD_DOWN",
+      "Down",
+    );
+    const downLeft = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.DOWN_LEFT,
+      CIRCLE_PAD_BTN_DOWN_LEFT,
+      "DPAD_DIAGONAL",
+      "Down-left",
+    );
+    const downRight = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.DOWN_RIGHT,
+      CIRCLE_PAD_BTN_DOWN_RIGHT,
+      "DPAD_DIAGONAL",
+      "Down-right",
+    );
+    const left = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.LEFT,
+      CIRCLE_PAD_BTN_LEFT,
+      "DPAD_LEFT",
+      "Left",
+    );
+    const right = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.RIGHT,
+      CIRCLE_PAD_BTN_RIGHT,
+      "DPAD_RIGHT",
+      "Right",
+    );
+    // Mic button icon swap:
+    //   - default (off): show mdi:microphone-off
+    //   - active  (on):  show mdi:microphone (recording in progress)
+    // The first iconKey is the default; the second is the active.
+    const mic = buildButtonHtml(
+      CIRCLE_PAD_ACTIONS.MIC,
+      CIRCLE_PAD_BTN_MIC,
+      "MICROPHONE_OFF",
+      "Toggle microphone",
+      "MICROPHONE",
+    );
+    // Each button is a direct grid child. The grid is 3x3 and each
+    // button uses its own `grid-area` to position itself:
+    //   - up     -> row 1, col 2
+    //   - left   -> row 2, col 1
+    //   - mic    -> row 2, col 2 (the center, slightly larger)
+    //   - right  -> row 2, col 3
+    //   - down   -> row 3, col 2
+    // No slot wrappers — putting multiple buttons in one grid cell
+    // would cause them to overlap (the bug we just fixed).
+    return (
+      '<div class="' +
+      CIRCLE_PAD_CLASS +
+      '" role="group" aria-label="D-pad control">' +
+      upLeft +
+      up +
+      upRight +
+      left +
+      mic +
+      right +
+      downLeft +
+      down +
+      downRight +
+      "</div>"
+    );
+  };
+
+  // ----------------------------------------------------------------
+  // The custom element
+  // ----------------------------------------------------------------
+
+  /**
+   * <circle-pad-control> — a reusable D-pad touchpad custom element.
+   *
+   * Public API:
+   *   - setActive(action, active)  programmatically toggle a button
+   *   - getState()                 returns { mic: boolean }
+   *   - addEventListener('circle-pad-press',   fn) { action, originalEvent }
+   *   - addEventListener('circle-pad-release', fn) { action, originalEvent }
+   *   - addEventListener('circle-pad-toggle',  fn) { action, active, originalEvent }
+   *
+   * Press/release actions:
+   *   up, up-right, right, down-right, down, down-left, left, up-left
+   *
+   * Toggle actions:
+   *   mic
+   *
+   * All events bubble and are composed, so they cross shadow
+   * boundaries. Consumers in any shadow root can listen to them.
+   */
+  class CirclePadControl extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      // State: which buttons are currently pressed / active.
+      this._pressed = new Set();
+      this._pressedByPointer = new Map();
+      this._activeMic = false;
+      // Guard against re-mounting the shadow content if the element
+      // is moved or recycled in the DOM (e.g. when Home Assistant's
+      // card editor re-parents the live card during dialog open/
+      // close). Without this, each connectedCallback appends another
+      // <style> + <div class="circle-pad"> to the shadow root, which
+      // stacks the dpad UI on top of itself.
+      this._mounted = false;
+    }
+
+    // ---- lifecycle ----
+
+    connectedCallback() {
+      this._mount();
+      this._wirePointerEvents();
+    }
+
+    disconnectedCallback() {
+      // Best-effort: clear any pressed state when the element is
+      // removed from the DOM so we don't leak listeners.
+      this._pressed.clear();
+      // Do NOT reset _mounted here. The element is still the same
+      // instance; on re-connection we want _mount to be a no-op.
+      // If the element is genuinely destroyed (GC), the flag goes
+      // with it. If HA ever does a true element replace, the new
+      // element gets a fresh _mounted=false in its constructor.
+    }
+
+    // ---- public API ----
+
+    /**
+     * Programmatically set the active state of a button.
+     *
+     * @param {string} action one of CIRCLE_PAD_ACTIONS.*
+     * @param {boolean} active true to activate, false to deactivate
+     */
+    setActive(action, active) {
+      if (action === CIRCLE_PAD_ACTIONS.MIC) {
+        this._activeMic = Boolean(active);
+        this._applyMicState();
+      }
+      // Arrow buttons are momentary; programmatic setActive on them
+      // is a no-op. Use dispatchEvent via setPressed() if you need
+      // to simulate a press.
+    }
+
+    /**
+     * Read the current persistent state of the D-pad.
+     * (Momentary press state is not exposed — only toggles.)
+     *
+     * @returns {{ mic: boolean }}
+     */
+    getState() {
+      return { mic: this._activeMic };
+    }
+
+    // ---- internals ----
+
+    _mount() {
+      // Idempotent: only build the shadow content once per element
+      // instance. connectedCallback can fire multiple times if the
+      // element is moved in the DOM (e.g. by Home Assistant's card
+      // editor re-parenting the live card during dialog open/close);
+      // without this guard, each re-connection would append another
+      // <style> + <div class="circle-pad"> to the same shadow root, which
+      // visually stacks the dpad UI on top of itself.
+      if (this._mounted) return;
+      this._mounted = true;
+
+      const style = document.createElement("style");
+      style.textContent = CIRCLE_PAD_STYLES;
+
+      const host = document.createElement("div");
+      host.innerHTML = buildDpadHtml();
+
+      this.shadowRoot.appendChild(style);
+      this.shadowRoot.appendChild(host.firstElementChild);
+    }
+
+    _wirePointerEvents() {
+      const root = this.shadowRoot;
+      if (!root) return;
+
+      const findBtn = (target) =>
+        target instanceof Element
+          ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
+          : null;
+
+      const clearPressed = (btn) => {
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        this._pressed.delete(action);
+        btn.classList.remove("is-pressed");
+      };
+
+      const releaseByPointer = (ev) => {
+        if (!ev || ev.pointerId === null || ev.pointerId === undefined)
+          return false;
+        const state = this._pressedByPointer.get(ev.pointerId);
+        if (!state) return false;
+        this._pressedByPointer.delete(ev.pointerId);
+        clearPressed(state.btn);
+        this._dispatch(EVT_RELEASE, { action: state.action });
+        return true;
+      };
+
+      // pointerdown: start a press for any D-pad button
+      root.addEventListener("pointerdown", (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) return; // mic is a click toggle, not a press
+        this._pressed.add(action);
+        if (ev.pointerId !== null && ev.pointerId !== undefined) {
+          this._pressedByPointer.set(ev.pointerId, { action, btn });
+        }
+        btn.classList.add("is-pressed");
+        this._dispatch(EVT_PRESS, { action });
+        // Capture pointer so we still receive pointerup if the user
+        // drags off the button (common on touch).
+        if (
+          typeof btn.setPointerCapture === "function" &&
+          ev.pointerId !== null
+        ) {
+          try {
+            btn.setPointerCapture(ev.pointerId);
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      });
+
+      // pointerup / pointercancel: release the press
+      const release = (ev) => {
+        if (releaseByPointer(ev)) return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      };
+      root.addEventListener("pointerup", release);
+      root.addEventListener("pointercancel", release);
+
+      // pointerleave: clear if the pointer truly leaves the button
+      root.addEventListener("pointerleave", (ev) => {
+        if (releaseByPointer(ev)) return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      });
+
+      // click: toggle the mic button
+      root.addEventListener("click", (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC)
+          return;
+        this._activeMic = !this._activeMic;
+        this._applyMicState();
+        this._dispatch(EVT_TOGGLE, {
+          action: CIRCLE_PAD_ACTIONS.MIC,
+          active: this._activeMic,
+        });
+      });
+    }
+
+    _applyMicState() {
+      const root = this.shadowRoot;
+      if (!root) return;
+      const mic = root.querySelector("." + CIRCLE_PAD_BTN_MIC);
+      if (!mic) return;
+      mic.classList.toggle("is-active", this._activeMic);
+      mic.setAttribute("aria-pressed", String(this._activeMic));
+    }
+
+    /**
+     * Dispatch a CustomEvent on the host with composed:true so it
+     * crosses the shadow DOM boundary. Listeners on the host (or
+     * any ancestor) will see it.
+     *
+     * @param {string} type
+     * @param {object} detail
+     */
+    _dispatch(type, detail) {
+      this.dispatchEvent(
+        new CustomEvent(type, {
+          detail: { ...detail, originalEvent: undefined },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  // Register the custom element. Guard against double-registration
+  // (e.g. if this module is imported more than once).
+  if (
+    typeof customElements !== "undefined" &&
+    !customElements.get("circle-pad-control")
+  ) {
+    customElements.define("circle-pad-control", CirclePadControl);
+  }
+
+  /**
    * readout.js
    * ---------------------------------------------------------------
    * Reusable scrolling event-log custom element: <dpad-readout>
@@ -1752,31 +2388,39 @@
   // Class hooks & custom event names
   // ----------------------------------------------------------------
 
-  const READOUT_CLASS = 'dpad-readout';
-  const READOUT_LOG_CLASS = 'dpad-readout__log';
-  const READOUT_LINE_CLASS = 'dpad-readout__line';
-  const READOUT_CLEAR_CLASS = 'dpad-readout__clear';
-  const READOUT_EMPTY_CLASS = 'dpad-readout__empty';
+  const READOUT_CLASS = "dpad-readout";
+  const READOUT_LOG_CLASS = "dpad-readout__log";
+  const READOUT_LINE_CLASS = "dpad-readout__line";
+  const READOUT_CLEAR_CLASS = "dpad-readout__clear";
+  const READOUT_EMPTY_CLASS = "dpad-readout__empty";
 
-  const EVT_LOG = 'readout-log';
+  const EVT_LOG = "readout-log";
 
   // Direction actions the readout cares about. The microphone is
   // intentionally excluded per the user spec.
   const TRACKED_ACTIONS = Object.freeze(
     new Set([
-      'up',
-      'up-right',
-      'right',
-      'down-right',
-      'down',
-      'down-left',
-      'left',
-      'up-left',
+      "up",
+      "up-right",
+      "right",
+      "down-right",
+      "down",
+      "down-left",
+      "left",
+      "up-left",
     ]),
   );
 
-  const PRESS_EVENTS = Object.freeze(['dpad-press', 'dpad-8way-press']);
-  const RELEASE_EVENTS = Object.freeze(['dpad-release', 'dpad-8way-release']);
+  const PRESS_EVENTS = Object.freeze([
+    "dpad-press",
+    "dpad-8way-press",
+    "circle-pad-press",
+  ]);
+  const RELEASE_EVENTS = Object.freeze([
+    "dpad-release",
+    "dpad-8way-release",
+    "circle-pad-release",
+  ]);
 
   // Repeater interval (ms) for "keep printing while held".
   const REPEAT_INTERVAL_MS = 150;
@@ -1787,7 +2431,7 @@
 
   // Default labels per action. The default appends "[<action>]"
   // which the user explicitly asked for. Override via subscribe().
-  const DEFAULT_FORMAT = (action) => '[' + action + ']';
+  const DEFAULT_FORMAT = (action) => "[" + action + "]";
 
   // ----------------------------------------------------------------
   // Styles \u2014 self-contained, uses only HA design tokens for theming
@@ -1926,7 +2570,7 @@
   class DpadReadout extends HTMLElement {
     constructor() {
       super();
-      this.attachShadow({ mode: 'open' });
+      this.attachShadow({ mode: "open" });
       /** @type {string[]} newest line last */
       this._log = [];
       /** @type {Map<string, number>} action -> interval id */
@@ -1952,7 +2596,11 @@
     disconnectedCallback() {
       // Clean up any active event subscriptions and repeat timers.
       this._unsubscribers.forEach((off) => {
-        try { off(); } catch (_e) { /* ignore */ }
+        try {
+          off();
+        } catch (_e) {
+          /* ignore */
+        }
       });
       this._unsubscribers = [];
       this._stopAllRepeaters();
@@ -1973,7 +2621,7 @@
      * @param {string} text
      */
     append(text) {
-      const line = text == null ? '' : String(text);
+      const line = text == null ? "" : String(text);
       if (!line) return;
       this._log.push(line);
       if (this._log.length > MAX_LOG_LINES) {
@@ -2014,7 +2662,7 @@
      *   - On dpad-release:          stop the repeater for that action.
      *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
      *
-    * @param {HTMLElement} dpadEl   a <dpad-control> or <dpad-8way-control> element
+     * @param {HTMLElement} dpadEl   a <dpad-control>, <dpad-8way-control>, or <circle-pad-control> element
      * @param {object} [opts]
      * @param {(action: string) => string} [opts.format]
      *        override the default line formatter. Receives the
@@ -2023,13 +2671,13 @@
      * @returns {() => void}         unsubscribe function
      */
     subscribe(dpadEl, opts = {}) {
-      if (!dpadEl || typeof dpadEl.addEventListener !== 'function') {
+      if (!dpadEl || typeof dpadEl.addEventListener !== "function") {
         // eslint-disable-next-line no-console
-        console.warn('[dpad-readout] subscribe() needs a valid element');
+        console.warn("[dpad-readout] subscribe() needs a valid element");
         return () => {};
       }
 
-      if (typeof opts.format === 'function') this._format = opts.format;
+      if (typeof opts.format === "function") this._format = opts.format;
 
       const onPress = (ev) => {
         const action = ev.detail && ev.detail.action;
@@ -2050,7 +2698,9 @@
 
       const off = () => {
         PRESS_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onPress));
-        RELEASE_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onRelease));
+        RELEASE_EVENTS.forEach((evt) =>
+          dpadEl.removeEventListener(evt, onRelease),
+        );
         this._stopAllRepeaters();
       };
       this._unsubscribers.push(off);
@@ -2095,20 +2745,28 @@
       if (this._mounted) return;
       this._mounted = true;
 
-      const style = document.createElement('style');
+      const style = document.createElement("style");
       style.textContent = READOUT_STYLES;
 
-      const host = document.createElement('div');
+      const host = document.createElement("div");
       host.className = READOUT_CLASS;
       host.innerHTML =
-        '<div class="' + READOUT_CLASS + '__header">' +
-          '<span class="' + READOUT_CLASS + '__title">Activity</span>' +
-          '<button type="button" class="' + READOUT_CLEAR_CLASS + '" aria-label="Clear log">' +
-            '<ha-icon icon="mdi:delete-sweep"></ha-icon>' +
-            '<span>Clear</span>' +
-          '</button>' +
-        '</div>' +
-        '<div class="' + READOUT_LOG_CLASS + '" role="log" aria-live="polite"></div>';
+        '<div class="' +
+        READOUT_CLASS +
+        '__header">' +
+        '<span class="' +
+        READOUT_CLASS +
+        '__title">Activity</span>' +
+        '<button type="button" class="' +
+        READOUT_CLEAR_CLASS +
+        '" aria-label="Clear log">' +
+        '<ha-icon icon="mdi:delete-sweep"></ha-icon>' +
+        "<span>Clear</span>" +
+        "</button>" +
+        "</div>" +
+        '<div class="' +
+        READOUT_LOG_CLASS +
+        '" role="log" aria-live="polite"></div>';
 
       this.shadowRoot.appendChild(style);
       this.shadowRoot.appendChild(host);
@@ -2116,19 +2774,22 @@
       // Wire the clear button. The button is inside the shadow root,
       // so we bind the listener to the host element (composed
       // events bubble across the shadow boundary).
-      const clearBtn = this.shadowRoot.querySelector('.' + READOUT_CLEAR_CLASS);
+      const clearBtn = this.shadowRoot.querySelector("." + READOUT_CLEAR_CLASS);
       if (clearBtn) {
-        clearBtn.addEventListener('click', () => this.clear());
+        clearBtn.addEventListener("click", () => this.clear());
       }
     }
 
     _render() {
-      const logEl = this.shadowRoot && this.shadowRoot.querySelector('.' + READOUT_LOG_CLASS);
+      const logEl =
+        this.shadowRoot && this.shadowRoot.querySelector("." + READOUT_LOG_CLASS);
       if (!logEl) return;
 
       if (this._log.length === 0) {
         logEl.innerHTML =
-          '<div class="' + READOUT_EMPTY_CLASS + '">No activity yet \u2014 push a direction button.</div>';
+          '<div class="' +
+          READOUT_EMPTY_CLASS +
+          '">No activity yet \u2014 push a direction button.</div>';
         return;
       }
 
@@ -2136,9 +2797,14 @@
       // textContent-safe (no innerHTML) so user-influenced strings
       // (if any) can never inject markup.
       const lines = this._log.map(
-        (line) => '<div class="' + READOUT_LINE_CLASS + '">' + escapeHtml(line) + '</div>',
+        (line) =>
+          '<div class="' +
+          READOUT_LINE_CLASS +
+          '">' +
+          escapeHtml(line) +
+          "</div>",
       );
-      logEl.innerHTML = lines.join('');
+      logEl.innerHTML = lines.join("");
 
       // Auto-scroll to the bottom so the newest line is always
       // visible. (No-op if the user has scrolled up to read older
@@ -2168,7 +2834,7 @@
   // Lightweight HTML-escape used when rendering log lines. We
   // import lazily to keep this module dependency-free.
   function escapeHtml(value) {
-    if (value === null || value === undefined) return '';
+    if (value === null || value === undefined) return "";
     return String(value)
       .replace(/&/g, String.fromCharCode(38, 97, 109, 112, 59))
       .replace(/</g, String.fromCharCode(38, 108, 116, 59))
@@ -2179,8 +2845,11 @@
 
   // Register the custom element. Guard against double-registration
   // (e.g. if this module is imported more than once).
-  if (typeof customElements !== 'undefined' && !customElements.get('dpad-readout')) {
-    customElements.define('dpad-readout', DpadReadout);
+  if (
+    typeof customElements !== "undefined" &&
+    !customElements.get("dpad-readout")
+  ) {
+    customElements.define("dpad-readout", DpadReadout);
   }
 
   /**
@@ -2209,7 +2878,7 @@
 
 
   // Numeric page navigation rendered in the top-left of every
-  // card header. Three buttons labeled (1) (2) (3). The button
+  // card header. Four buttons labeled (1) (2) (3) (4). The button
   // for the current view is marked .is-active and is not clickable
   // — you can't navigate to the page you're already on. The card
   // wires up click handlers via event delegation on the host,
@@ -2222,12 +2891,14 @@
     [LAYOUTS.MAIN]: 1,
     [LAYOUTS.DETAIL]: 2,
     [LAYOUTS.DETAIL_8WAY]: 3,
+    [LAYOUTS.DETAIL_CIRCLE]: 4,
   });
   // Ordered list of view ids in the nav, for rendering left-to-right.
   const PAGE_NAV_ORDER = [
     LAYOUTS.MAIN,
     LAYOUTS.DETAIL,
     LAYOUTS.DETAIL_8WAY,
+    LAYOUTS.DETAIL_CIRCLE,
   ];
 
   // ----------------------------------------------------------------
@@ -2235,7 +2906,7 @@
   // ----------------------------------------------------------------
 
   /**
-   * Build the numeric page-nav strip (1) (2) (3). Always rendered
+   * Build the numeric page-nav strip (1) (2) (3) (4). Always rendered
    * regardless of whether the current view has a title/subtitle, so
    * the user always has a way to navigate between pages.
    *
@@ -2244,7 +2915,7 @@
    * two are real buttons; the card catches clicks via event
    * delegation using [data-page-nav="<view-id>"].
    *
-   * @param {string} currentView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL | LAYOUTS.DETAIL_8WAY
+   * @param {string} currentView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL | LAYOUTS.DETAIL_8WAY | LAYOUTS.DETAIL_CIRCLE
    * @returns {string} raw HTML
    */
   const buildPageNav = (currentView) => {
@@ -2355,6 +3026,17 @@
     '</div>';
 
   /**
+   * Build the circle-pad + readout content area.
+   *
+   * @returns {string} raw HTML
+   */
+  const buildCirclePadContent = () =>
+    '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
+      '<circle-pad-control></circle-pad-control>' +
+      '<dpad-readout></dpad-readout>' +
+    '</div>';
+
+  /**
    * Build the card footer (currently just the version string).
    *
    * @param {{version:string}} vm
@@ -2393,6 +3075,17 @@
             '<div class="' + REGIONS.CARD_WRAPPER + '">' +
               buildHeader(vm) +
               buildDpad8wayContent() +
+              buildFooter(vm) +
+            '</div>' +
+          '</ha-card>'
+        );
+      case LAYOUTS.DETAIL_CIRCLE:
+        // Fourth page: circle-pad view.
+        return (
+          '<ha-card>' +
+            '<div class="' + REGIONS.CARD_WRAPPER + '">' +
+              buildHeader(vm) +
+              buildCirclePadContent() +
               buildFooter(vm) +
             '</div>' +
           '</ha-card>'
@@ -2961,7 +3654,9 @@
      */
     _wireDpadReadout(host) {
       if (!host) return;
-      const dpad = host.querySelector("dpad-control, dpad-8way-control");
+      const dpad = host.querySelector(
+        "dpad-control, dpad-8way-control, circle-pad-control",
+      );
       const readout = host.querySelector("dpad-readout");
       if (!dpad || !readout) return;
 

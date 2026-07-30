@@ -62,8 +62,16 @@ const TRACKED_ACTIONS = Object.freeze(
   ]),
 );
 
-const PRESS_EVENTS = Object.freeze(["dpad-press", "dpad-8way-press"]);
-const RELEASE_EVENTS = Object.freeze(["dpad-release", "dpad-8way-release"]);
+const PRESS_EVENTS = Object.freeze([
+  "dpad-press",
+  "dpad-8way-press",
+  "circle-pad-press",
+]);
+const RELEASE_EVENTS = Object.freeze([
+  "dpad-release",
+  "dpad-8way-release",
+  "circle-pad-release",
+]);
 
 // Repeater interval (ms) for "keep printing while held".
 const REPEAT_INTERVAL_MS = 150;
@@ -305,7 +313,7 @@ class DpadReadout extends HTMLElement {
    *   - On dpad-release:          stop the repeater for that action.
    *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
    *
-   * @param {HTMLElement} dpadEl   a <dpad-control> or <dpad-8way-control> element
+   * @param {HTMLElement} dpadEl   a <dpad-control>, <dpad-8way-control>, or <circle-pad-control> element
    * @param {object} [opts]
    * @param {(action: string) => string} [opts.format]
    *        override the default line formatter. Receives the

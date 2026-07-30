@@ -22,29 +22,31 @@
  * ---------------------------------------------------------------
  */
 
-import { LAYOUTS, REGIONS } from './constants.js';
-import { escapeHtml } from './helpers.js';
+import { LAYOUTS, REGIONS } from "./constants.js";
+import { escapeHtml } from "./helpers.js";
 
 // Numeric page navigation rendered in the top-left of every
-// card header. Three buttons labeled (1) (2) (3). The button
+// card header. Four buttons labeled (1) (2) (3) (4). The button
 // for the current view is marked .is-active and is not clickable
 // — you can't navigate to the page you're already on. The card
 // wires up click handlers via event delegation on the host,
 // using [data-page-nav="<view-id>"].
-const PAGE_NAV_CLASS = 'card-page-nav';
-const PAGE_NAV_ITEM_CLASS = 'card-page-nav__item';
-const PAGE_NAV_DATA = 'data-page-nav';
+const PAGE_NAV_CLASS = "card-page-nav";
+const PAGE_NAV_ITEM_CLASS = "card-page-nav__item";
+const PAGE_NAV_DATA = "data-page-nav";
 // Index of each page in the 1-based nav. Used as the label.
 const PAGE_NAV_INDEX = Object.freeze({
   [LAYOUTS.MAIN]: 1,
   [LAYOUTS.DETAIL]: 2,
   [LAYOUTS.DETAIL_8WAY]: 3,
+  [LAYOUTS.DETAIL_CIRCLE]: 4,
 });
 // Ordered list of view ids in the nav, for rendering left-to-right.
 const PAGE_NAV_ORDER = [
   LAYOUTS.MAIN,
   LAYOUTS.DETAIL,
   LAYOUTS.DETAIL_8WAY,
+  LAYOUTS.DETAIL_CIRCLE,
 ];
 
 // ----------------------------------------------------------------
@@ -52,7 +54,7 @@ const PAGE_NAV_ORDER = [
 // ----------------------------------------------------------------
 
 /**
- * Build the numeric page-nav strip (1) (2) (3). Always rendered
+ * Build the numeric page-nav strip (1) (2) (3) (4). Always rendered
  * regardless of whether the current view has a title/subtitle, so
  * the user always has a way to navigate between pages.
  *
@@ -61,7 +63,7 @@ const PAGE_NAV_ORDER = [
  * two are real buttons; the card catches clicks via event
  * delegation using [data-page-nav="<view-id>"].
  *
- * @param {string} currentView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL | LAYOUTS.DETAIL_8WAY
+ * @param {string} currentView  one of LAYOUTS.MAIN | LAYOUTS.DETAIL | LAYOUTS.DETAIL_8WAY | LAYOUTS.DETAIL_CIRCLE
  * @returns {string} raw HTML
  */
 const buildPageNav = (currentView) => {
@@ -71,25 +73,44 @@ const buildPageNav = (currentView) => {
     // Active page is a non-interactive label, not a button.
     if (isActive) {
       return (
-        '<span class="' + PAGE_NAV_ITEM_CLASS + ' ' + PAGE_NAV_ITEM_CLASS + '--active" ' +
-          'aria-current="page" aria-label="Current page (' + index + ')">' +
-          '(' + index + ')' +
-        '</span>'
+        '<span class="' +
+        PAGE_NAV_ITEM_CLASS +
+        " " +
+        PAGE_NAV_ITEM_CLASS +
+        '--active" ' +
+        'aria-current="page" aria-label="Current page (' +
+        index +
+        ')">' +
+        "(" +
+        index +
+        ")" +
+        "</span>"
       );
     }
     return (
-      '<button type="button" class="' + PAGE_NAV_ITEM_CLASS + '" ' +
-        PAGE_NAV_DATA + '="' + escapeHtml(view) + '" ' +
-        'aria-label="Go to page ' + index + '">' +
-        '(' + index + ')' +
-      '</button>'
+      '<button type="button" class="' +
+      PAGE_NAV_ITEM_CLASS +
+      '" ' +
+      PAGE_NAV_DATA +
+      '="' +
+      escapeHtml(view) +
+      '" ' +
+      'aria-label="Go to page ' +
+      index +
+      '">' +
+      "(" +
+      index +
+      ")" +
+      "</button>"
     );
   });
   return (
-    '<div class="' + PAGE_NAV_CLASS + '" role="navigation" ' +
-      'aria-label="Card pages">' +
-      items.join('') +
-    '</div>'
+    '<div class="' +
+    PAGE_NAV_CLASS +
+    '" role="navigation" ' +
+    'aria-label="Card pages">' +
+    items.join("") +
+    "</div>"
   );
 };
 
@@ -107,17 +128,35 @@ const buildHeader = (vm) => {
   const hasTitle = Boolean(vm.title);
   const hasSubtitle = Boolean(vm.subtitle);
   return (
-    '<div class="' + REGIONS.HEADER + '">' +
-      '<div class="' + REGIONS.HEADER + '__row">' +
-        buildPageNav(vm.view) +
-        (hasTitle || hasSubtitle
-          ? '<div class="' + REGIONS.HEADER + '__text">' +
-              (hasTitle ? '<h2 class="' + REGIONS.TITLE + '">' + escapeHtml(vm.title) + '</h2>' : '') +
-              (hasSubtitle ? '<p class="' + REGIONS.SUBTITLE + '">' + escapeHtml(vm.subtitle) + '</p>' : '') +
-            '</div>'
-          : '') +
-      '</div>' +
-    '</div>'
+    '<div class="' +
+    REGIONS.HEADER +
+    '">' +
+    '<div class="' +
+    REGIONS.HEADER +
+    '__row">' +
+    buildPageNav(vm.view) +
+    (hasTitle || hasSubtitle
+      ? '<div class="' +
+        REGIONS.HEADER +
+        '__text">' +
+        (hasTitle
+          ? '<h2 class="' +
+            REGIONS.TITLE +
+            '">' +
+            escapeHtml(vm.title) +
+            "</h2>"
+          : "") +
+        (hasSubtitle
+          ? '<p class="' +
+            REGIONS.SUBTITLE +
+            '">' +
+            escapeHtml(vm.subtitle) +
+            "</p>"
+          : "") +
+        "</div>"
+      : "") +
+    "</div>" +
+    "</div>"
   );
 };
 
@@ -130,12 +169,8 @@ const buildHeader = (vm) => {
  * @returns {string} raw HTML
  */
 const buildContent = (vm) => {
-  const html = typeof vm.content === 'string' ? vm.content : '';
-  return (
-    '<div class="' + REGIONS.CONTENT + '">' +
-      html +
-    '</div>'
-  );
+  const html = typeof vm.content === "string" ? vm.content : "";
+  return '<div class="' + REGIONS.CONTENT + '">' + html + "</div>";
 };
 
 /**
@@ -152,10 +187,14 @@ const buildContent = (vm) => {
  * @returns {string} raw HTML
  */
 const buildDpadContent = () =>
-  '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
-    '<dpad-control></dpad-control>' +
-    '<dpad-readout></dpad-readout>' +
-  '</div>';
+  '<div class="' +
+  REGIONS.CONTENT +
+  " " +
+  REGIONS.CONTENT +
+  '--dpad">' +
+  "<dpad-control></dpad-control>" +
+  "<dpad-readout></dpad-readout>" +
+  "</div>";
 
 /**
  * Build the 8-way D-pad + readout content area. Same shape as
@@ -166,10 +205,29 @@ const buildDpadContent = () =>
  * @returns {string} raw HTML
  */
 const buildDpad8wayContent = () =>
-  '<div class="' + REGIONS.CONTENT + ' ' + REGIONS.CONTENT + '--dpad">' +
-    '<dpad-8way-control></dpad-8way-control>' +
-    '<dpad-readout></dpad-readout>' +
-  '</div>';
+  '<div class="' +
+  REGIONS.CONTENT +
+  " " +
+  REGIONS.CONTENT +
+  '--dpad">' +
+  "<dpad-8way-control></dpad-8way-control>" +
+  "<dpad-readout></dpad-readout>" +
+  "</div>";
+
+/**
+ * Build the circle-pad + readout content area.
+ *
+ * @returns {string} raw HTML
+ */
+const buildCirclePadContent = () =>
+  '<div class="' +
+  REGIONS.CONTENT +
+  " " +
+  REGIONS.CONTENT +
+  '--dpad">' +
+  "<circle-pad-control></circle-pad-control>" +
+  "<dpad-readout></dpad-readout>" +
+  "</div>";
 
 /**
  * Build the card footer (currently just the version string).
@@ -178,7 +236,7 @@ const buildDpad8wayContent = () =>
  * @returns {string} raw HTML
  */
 const buildFooter = (vm) =>
-  '<div class="' + REGIONS.FOOTER + '">v' + escapeHtml(vm.version) + '</div>';
+  '<div class="' + REGIONS.FOOTER + '">v' + escapeHtml(vm.version) + "</div>";
 
 // ----------------------------------------------------------------
 // Sub-component factories (for future expansion)
@@ -193,11 +251,17 @@ const buildFooter = (vm) =>
  * @param {'ok'|'warn'|'error'} tone
  * @returns {string} raw HTML
  */
-export const buildStatusPill = (label, value, tone = 'ok') =>
-  '<span class="status-pill status-pill--' + escapeHtml(tone) + '">' +
-    '<span class="status-pill__label">' + escapeHtml(label) + '</span>' +
-    '<span class="status-pill__value">' + escapeHtml(value) + '</span>' +
-  '</span>';
+export const buildStatusPill = (label, value, tone = "ok") =>
+  '<span class="status-pill status-pill--' +
+  escapeHtml(tone) +
+  '">' +
+  '<span class="status-pill__label">' +
+  escapeHtml(label) +
+  "</span>" +
+  '<span class="status-pill__value">' +
+  escapeHtml(value) +
+  "</span>" +
+  "</span>";
 
 // ----------------------------------------------------------------
 // Top-level factory
@@ -214,47 +278,68 @@ export const buildCardHtml = (vm) => {
     case LAYOUTS.DETAIL:
       // Second page: 4-way D-pad view.
       return (
-        '<ha-card>' +
-          '<div class="' + REGIONS.CARD_WRAPPER + '">' +
-            buildHeader(vm) +
-            buildDpadContent() +
-            buildFooter(vm) +
-          '</div>' +
-        '</ha-card>'
+        "<ha-card>" +
+        '<div class="' +
+        REGIONS.CARD_WRAPPER +
+        '">' +
+        buildHeader(vm) +
+        buildDpadContent() +
+        buildFooter(vm) +
+        "</div>" +
+        "</ha-card>"
       );
     case LAYOUTS.DETAIL_8WAY:
       // Third page: 8-way D-pad view.
       return (
-        '<ha-card>' +
-          '<div class="' + REGIONS.CARD_WRAPPER + '">' +
-            buildHeader(vm) +
-            buildDpad8wayContent() +
-            buildFooter(vm) +
-          '</div>' +
-        '</ha-card>'
+        "<ha-card>" +
+        '<div class="' +
+        REGIONS.CARD_WRAPPER +
+        '">' +
+        buildHeader(vm) +
+        buildDpad8wayContent() +
+        buildFooter(vm) +
+        "</div>" +
+        "</ha-card>"
+      );
+    case LAYOUTS.DETAIL_CIRCLE:
+      // Fourth page: circle-pad view.
+      return (
+        "<ha-card>" +
+        '<div class="' +
+        REGIONS.CARD_WRAPPER +
+        '">' +
+        buildHeader(vm) +
+        buildCirclePadContent() +
+        buildFooter(vm) +
+        "</div>" +
+        "</ha-card>"
       );
     case LAYOUTS.SETTINGS:
       // Reserved for a future settings view. For now, treat it
       // identically to the detail view.
       return (
-        '<ha-card>' +
-          '<div class="' + REGIONS.CARD_WRAPPER + '">' +
-            buildHeader(vm) +
-            buildDpadContent() +
-            buildFooter(vm) +
-          '</div>' +
-        '</ha-card>'
+        "<ha-card>" +
+        '<div class="' +
+        REGIONS.CARD_WRAPPER +
+        '">' +
+        buildHeader(vm) +
+        buildDpadContent() +
+        buildFooter(vm) +
+        "</div>" +
+        "</ha-card>"
       );
     case LAYOUTS.MAIN:
     default:
       return (
-        '<ha-card>' +
-          '<div class="' + REGIONS.CARD_WRAPPER + '">' +
-            buildHeader(vm) +
-            buildContent(vm) +
-            buildFooter(vm) +
-          '</div>' +
-        '</ha-card>'
+        "<ha-card>" +
+        '<div class="' +
+        REGIONS.CARD_WRAPPER +
+        '">' +
+        buildHeader(vm) +
+        buildContent(vm) +
+        buildFooter(vm) +
+        "</div>" +
+        "</ha-card>"
       );
   }
 };
