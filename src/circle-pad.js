@@ -147,17 +147,10 @@ const CIRCLE_PAD_STYLES = `
     fill: url(#dome-gradient);
   }
 
-  .center-button:hover #circle9,
-  .center-button:focus #circle9,
-  .center-button:focus-within #circle9,
-  .center-button:active #circle9,
   .center-button.is-active #circle9 {
     fill: url(#dome-gradient-green);
   }
 
-  .center-button:hover #path9,
-  .center-button:focus #path9,
-  .center-button:active #path9,
   .center-button.is-active #path9 {
     fill: var(--circle-pad-success);
   }
@@ -168,9 +161,6 @@ const CIRCLE_PAD_STYLES = `
       inset 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
-  .center-button:hover,
-  .center-button:focus,
-  .center-button:active,
   .center-button.is-active {
     filter: url(#green-glow-matrix);
   }
@@ -185,9 +175,6 @@ const CIRCLE_PAD_STYLES = `
     transition: fill 0.2s ease;
   }
 
-  .center-button:hover .mic-icon path,
-  .center-button:focus .mic-icon path,
-  .center-button:active .mic-icon path,
   .center-button.is-active .mic-icon path {
     fill: var(--circle-pad-text-1) !important;
   }

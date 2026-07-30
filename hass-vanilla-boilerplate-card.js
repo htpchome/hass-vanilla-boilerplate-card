@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.36";
+  const CARD_VERSION = "0.1.38";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1862,17 +1862,10 @@
     fill: url(#dome-gradient);
   }
 
-  .center-button:hover #circle9,
-  .center-button:focus #circle9,
-  .center-button:focus-within #circle9,
-  .center-button:active #circle9,
   .center-button.is-active #circle9 {
     fill: url(#dome-gradient-green);
   }
 
-  .center-button:hover #path9,
-  .center-button:focus #path9,
-  .center-button:active #path9,
   .center-button.is-active #path9 {
     fill: var(--circle-pad-success);
   }
@@ -1883,9 +1876,6 @@
       inset 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
-  .center-button:hover,
-  .center-button:focus,
-  .center-button:active,
   .center-button.is-active {
     filter: url(#green-glow-matrix);
   }
@@ -1900,9 +1890,6 @@
     transition: fill 0.2s ease;
   }
 
-  .center-button:hover .mic-icon path,
-  .center-button:focus .mic-icon path,
-  .center-button:active .mic-icon path,
   .center-button.is-active .mic-icon path {
     fill: var(--circle-pad-text-1) !important;
   }
@@ -2123,7 +2110,10 @@
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (action === CIRCLE_PAD_ACTIONS.MIC) return;
         pressDirection(btn, ev.pointerId);
-        if (typeof btn.setPointerCapture === "function" && ev.pointerId !== null) {
+        if (
+          typeof btn.setPointerCapture === "function" &&
+          ev.pointerId !== null
+        ) {
           try {
             btn.setPointerCapture(ev.pointerId);
           } catch (_e) {
@@ -2241,7 +2231,7 @@
    *                              lines on a short interval until
    *                              the user releases
    *       \u2022 On dpad-release: stop appending
-   *   - Microphone button: IGNORED (per user spec).
+   *   - Microphone button: logged on toggle as [mic:on]/[mic:off].
    *   - Clear button:        empties the log.
    *
    * The element is fully self-contained:
@@ -2289,6 +2279,11 @@
     "dpad-release",
     "dpad-8way-release",
     "circle-pad-release",
+  ]);
+  const TOGGLE_EVENTS = Object.freeze([
+    "dpad-toggle",
+    "dpad-8way-toggle",
+    "circle-pad-toggle",
   ]);
 
   // Repeater interval (ms) for "keep printing while held".
@@ -2433,8 +2428,7 @@
    *   - subscribe(dpadEl, [opts])  auto-update from a <dpad-control>
    *   - addEventListener('readout-log', fn)  fires on every append
    *
-   * The microphone button is intentionally ignored by the default
-   * subscribe() implementation, per the user spec.
+   * The microphone button is logged on toggle with explicit state.
    */
   class DpadReadout extends HTMLElement {
     constructor() {
@@ -2529,7 +2523,8 @@
      *     short-interval repeater so the log keeps growing while
      *     the user holds the button.
      *   - On dpad-release:          stop the repeater for that action.
-     *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
+    *   - On *-toggle { action:'mic', active }: append
+    *     "[mic:on]" or "[mic:off]".
      *
      * @param {HTMLElement} dpadEl   a <dpad-control>, <dpad-8way-control>, or <circle-pad-control> element
      * @param {object} [opts]
@@ -2561,14 +2556,23 @@
         if (!action) return;
         this._stopRepeater(action);
       };
+      const onToggle = (ev) => {
+        const detail = ev.detail || {};
+        if (detail.action !== "mic") return;
+        this.append(detail.active ? "[mic:on]" : "[mic:off]");
+      };
 
       PRESS_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onPress));
       RELEASE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onRelease));
+      TOGGLE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onToggle));
 
       const off = () => {
         PRESS_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onPress));
         RELEASE_EVENTS.forEach((evt) =>
           dpadEl.removeEventListener(evt, onRelease),
+        );
+        TOGGLE_EVENTS.forEach((evt) =>
+          dpadEl.removeEventListener(evt, onToggle),
         );
         this._stopAllRepeaters();
       };

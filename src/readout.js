@@ -23,7 +23,7 @@
  *                              lines on a short interval until
  *                              the user releases
  *       \u2022 On dpad-release: stop appending
- *   - Microphone button: IGNORED (per user spec).
+ *   - Microphone button: logged on toggle as [mic:on]/[mic:off].
  *   - Clear button:        empties the log.
  *
  * The element is fully self-contained:
@@ -71,6 +71,11 @@ const RELEASE_EVENTS = Object.freeze([
   "dpad-release",
   "dpad-8way-release",
   "circle-pad-release",
+]);
+const TOGGLE_EVENTS = Object.freeze([
+  "dpad-toggle",
+  "dpad-8way-toggle",
+  "circle-pad-toggle",
 ]);
 
 // Repeater interval (ms) for "keep printing while held".
@@ -215,8 +220,7 @@ const READOUT_STYLES = `
  *   - subscribe(dpadEl, [opts])  auto-update from a <dpad-control>
  *   - addEventListener('readout-log', fn)  fires on every append
  *
- * The microphone button is intentionally ignored by the default
- * subscribe() implementation, per the user spec.
+ * The microphone button is logged on toggle with explicit state.
  */
 class DpadReadout extends HTMLElement {
   constructor() {
@@ -311,7 +315,8 @@ class DpadReadout extends HTMLElement {
    *     short-interval repeater so the log keeps growing while
    *     the user holds the button.
    *   - On dpad-release:          stop the repeater for that action.
-   *   - The microphone is ignored (TRACKED_ACTIONS excludes it).
+   *   - On *-toggle { action:'mic', active }: append
+   *     "[mic:on]" or "[mic:off]".
    *
    * @param {HTMLElement} dpadEl   a <dpad-control>, <dpad-8way-control>, or <circle-pad-control> element
    * @param {object} [opts]
@@ -343,15 +348,22 @@ class DpadReadout extends HTMLElement {
       if (!action) return;
       this._stopRepeater(action);
     };
+    const onToggle = (ev) => {
+      const detail = ev.detail || {};
+      if (detail.action !== "mic") return;
+      this.append(detail.active ? "[mic:on]" : "[mic:off]");
+    };
 
     PRESS_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onPress));
     RELEASE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onRelease));
+    TOGGLE_EVENTS.forEach((evt) => dpadEl.addEventListener(evt, onToggle));
 
     const off = () => {
       PRESS_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onPress));
       RELEASE_EVENTS.forEach((evt) =>
         dpadEl.removeEventListener(evt, onRelease),
       );
+      TOGGLE_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onToggle));
       this._stopAllRepeaters();
     };
     this._unsubscribers.push(off);
