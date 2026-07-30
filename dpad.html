@@ -218,6 +218,141 @@
       --dpad-mic-icon-size: 54px;
     }
   </style>
+  <template id="dpad-styles">
+    <style>
+      /* ================================================================
+         Plain CSS for the dpad custom element. Edit this block to
+         re-skin the dpad; no need to touch the JavaScript. The
+         :host block aliases the standard Home Assistant design
+         tokens (defined on :root in the page or by HA itself) to
+         the dpad-internal names used below. Override ANY of those
+         HA tokens on :root, on the dpad-control, or on any
+         ancestor and the change propagates to every dpad in scope.
+         ================================================================ */
+      :host {
+        --dpad-bg-1: var(--secondary-background-color);
+        --dpad-bg-2: var(--primary-background-color);
+        --dpad-text-1: var(--primary-text-color);
+        --dpad-text-2: var(--secondary-text-color);
+        --dpad-text-3: var(--disabled-text-color);
+        --dpad-text-4: var(--text-primary-color);
+      }
+
+      .dpad {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        column-gap: 0;
+        row-gap: 0;
+        width: var(--dpad-size);
+        height: var(--dpad-size);
+        max-width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background-image:
+          radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),
+          radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);
+        border: 1px solid var(--dpad-text-3);
+        box-shadow: inset 0 0 12px var(--dpad-text-3);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .dpad__btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        color: var(--dpad-text-2);
+        border: none;
+        border-radius: 0;
+        cursor: pointer;
+        font: inherit;
+        font-size: var(--dpad-arrow-icon-size);
+        line-height: 1;
+        transition: color 80ms ease, transform 80ms ease;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      @media (hover: hover) {
+        .dpad__btn:hover { color: var(--dpad-text-1); }
+      }
+
+      .dpad__btn:focus-visible {
+        outline: 2px solid var(--accent, #03a9f4);
+        outline-offset: -4px;
+      }
+
+      /* Grid placement: 3x3 with mic in the center. */
+      .dpad__btn--up    { grid-area: 1 / 2; }
+      .dpad__btn--down  { grid-area: 3 / 2; }
+      .dpad__btn--left  { grid-area: 2 / 1; }
+      .dpad__btn--right { grid-area: 2 / 3; }
+
+      .dpad__btn--mic {
+        grid-area: 2 / 2;
+        width: var(--dpad-mic-size);
+        height: var(--dpad-mic-size);
+        align-self: center;
+        justify-self: center;
+        margin: auto;
+        font-size: var(--dpad-mic-icon-size);
+        background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);
+        border: 1px solid var(--dpad-text-1);
+        border-radius: 50%;
+        color: var(--dpad-text-2);
+      }
+
+      .dpad__btn.is-pressed {
+        color: var(--dpad-text-1);
+        transform: scale(0.92);
+      }
+
+      .dpad__btn--mic.is-active {
+        box-shadow:
+          inset 0 0 0 2px var(--success, #2e7d32),
+          inset 0 0 12px var(--success, #2e7d32);
+      }
+
+      /* Mic icon swap: show one glyph, hide the other, based on
+         whether the mic is active. The DOM always has both spans;
+         the CSS decides which is visible. */
+      .dpad__btn--mic .dpad__icon--active   { display: none; }
+      .dpad__btn--mic.is-active .dpad__icon--default { display: none; }
+      .dpad__btn--mic.is-active .dpad__icon--active  { display: inline-flex; }
+
+      /* Icon span: sizes the inline SVG inside each button. Arrow
+         buttons use --dpad-arrow-icon-size; the mic button uses
+         --dpad-mic-icon-size. The inner <svg> fills the span. */
+      .dpad__btn__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--dpad-arrow-icon-size);
+        height: var(--dpad-arrow-icon-size);
+        line-height: 0;
+      }
+      .dpad__btn--mic .dpad__btn__icon {
+        width: var(--dpad-mic-icon-size);
+        height: var(--dpad-mic-icon-size);
+      }
+      .dpad__btn__icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        pointer-events: none;
+      }
+    </style>
+  </template>
   <script>
     /* ================================================================
        <dpad-control> - a self-contained D-pad touchpad custom
@@ -270,12 +405,13 @@
         '</svg>';
       var SVG_VOL_ON =
         '<svg viewBox="0 0 24 24" fill="currentColor">' +
-        '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>' +
+        '<path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />' +
         '</svg>';
       var SVG_VOL_OFF =
         '<svg viewBox="0 0 24 24" fill="currentColor">' +
-        '<path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' +
+        '<path d="M19,11C19,12.19 18.66,13.3 18.1,14.28L16.87,13.05C17.14,12.43 17.3,11.74 17.3,11H19M15,11.16L9,5.18V5A3,3 0 0,1 12,2A3,3 0 0,1 15,5V11L15,11.16M4.27,3L21,19.73L19.73,21L15.54,16.81C14.77,17.27 13.91,17.58 13,17.72V21H11V17.72C7.72,17.23 5,14.41 5,11H6.7C6.7,14 9.24,16.1 12,16.1C12.81,16.1 13.6,15.91 14.31,15.58L12.65,13.92L12,14A3,3 0 0,1 9,11V10.28L3,4.27L4.27,3Z" />' +
         '</svg>';
+
 
       // Direction icons. Same chevron SVG, rotated per direction.
       // Default chevron points DOWN. CSS rotation: positive =
@@ -292,123 +428,9 @@
         mic_off: SVG_VOL_OFF,
       });
 
-      // Visual styles. Applied inside the shadow root. The :host
-      // block aliases the standard Home Assistant design tokens
-      // (defined on :root in the page or by HA itself) to the
-      // dpad-internal names used below. Override ANY of those
-      // HA tokens on :root, on the dpad-control, or on any
-      // ancestor and the change propagates to every dpad.
-      var DPAD_STYLES = '\n' +
-        '  :host {\n' +
-        '    --dpad-bg-1: var(--secondary-background-color);\n' +
-        '    --dpad-bg-2: var(--primary-background-color);\n' +
-        '    --dpad-text-1: var(--primary-text-color);\n' +
-        '    --dpad-text-2: var(--secondary-text-color);\n' +
-        '    --dpad-text-3: var(--disabled-text-color);\n' +
-        '    --dpad-text-4: var(--text-primary-color);\n' +
-        '  }\n' +
-        '  .' + DPAD_CLASS + ' {\n' +
-        '    position: relative;\n' +
-        '    display: grid;\n' +
-        '    grid-template-columns: repeat(3, 1fr);\n' +
-        '    grid-template-rows: repeat(3, 1fr);\n' +
-        '    column-gap: 0;\n' +
-        '    row-gap: 0;\n' +
-        '    width: var(--dpad-size);\n' +
-        '    height: var(--dpad-size);\n' +
-        '    max-width: 100%;\n' +
-        '    aspect-ratio: 1 / 1;\n' +
-        '    border-radius: 50%;\n' +
-        '    background-image:\n' +
-        '      radial-gradient(circle 95% at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%),\n' +
-        '      radial-gradient(circle 100% at top left, #202020 15%, #303030 100%);\n' +
-        '    border: 1px solid var(--dpad-text-3);\n' +
-        '    box-shadow: inset 0 0 12px var(--dpad-text-3);\n' +
-        '    overflow: hidden;\n' +
-        '    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,\n' +
-        '                 "Helvetica Neue", Arial, sans-serif;\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_CLASS + ' {\n' +
-        '    position: relative;\n' +
-        '    display: inline-flex;\n' +
-        '    align-items: center;\n' +
-        '    justify-content: center;\n' +
-        '    width: 100%;\n' +
-        '    height: 100%;\n' +
-        '    padding: 0;\n' +
-        '    margin: 0;\n' +
-        '    background: transparent;\n' +
-        '    color: var(--dpad-text-2);\n' +
-        '    border: none;\n' +
-        '    border-radius: 0;\n' +
-        '    cursor: pointer;\n' +
-        '    font: inherit;\n' +
-        '    font-size: var(--dpad-arrow-icon-size);\n' +
-        '    line-height: 1;\n' +
-        '    transition: color 80ms ease, transform 80ms ease;\n' +
-        '    user-select: none;\n' +
-        '    -webkit-tap-highlight-color: transparent;\n' +
-        '    touch-action: manipulation;\n' +
-        '  }\n' +
-        '  @media (hover: hover) {\n' +
-        '    .' + DPAD_BTN_CLASS + ':hover { color: var(--dpad-text-1); }\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_CLASS + ':focus-visible {\n' +
-        '    outline: 2px solid var(--accent, #03a9f4);\n' +
-        '    outline-offset: -4px;\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_UP + '    { grid-area: 1 / 2; }\n' +
-        '  .' + DPAD_BTN_DOWN + '  { grid-area: 3 / 2; }\n' +
-        '  .' + DPAD_BTN_LEFT + '  { grid-area: 2 / 1; }\n' +
-        '  .' + DPAD_BTN_RIGHT + ' { grid-area: 2 / 3; }\n' +
-        '  .' + DPAD_BTN_MIC + ' {\n' +
-        '    grid-area: 2 / 2;\n' +
-        '    width: var(--dpad-mic-size);\n' +
-        '    height: var(--dpad-mic-size);\n' +
-        '    align-self: center;\n' +
-        '    justify-self: center;\n' +
-        '    margin: auto;\n' +
-        '    font-size: var(--dpad-mic-icon-size);\n' +
-        '    background: radial-gradient(circle at top left, var(--dpad-bg-1) 15%, var(--dpad-bg-2) 100%);\n' +
-        '    border: 1px solid var(--dpad-text-1);\n' +
-        '    border-radius: 50%;\n' +
-        '    color: var(--dpad-text-2);\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_CLASS + '.is-pressed {\n' +
-        '    color: var(--dpad-text-1);\n' +
-        '    transform: scale(0.92);\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_MIC + '.is-active {\n' +
-        '    box-shadow:\n' +
-        '      inset 0 0 0 2px var(--success, #2e7d32),\n' +
-        '      inset 0 0 12px var(--success, #2e7d32);\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_MIC + ' .dpad__icon--active { display: none; }\n' +
-        '  .' + DPAD_BTN_MIC + '.is-active .dpad__icon--default { display: none; }\n' +
-        '  .' + DPAD_BTN_MIC + '.is-active .dpad__icon--active  { display: inline-flex; }\n' +
-        // Icon span: sizes the inline SVG inside each button. The
-        // arrow buttons use --dpad-arrow-icon-size; the mic
-        // button uses --dpad-mic-icon-size (defined on the
-        // .dpad__btn--mic block above).
-        '  .' + DPAD_BTN_CLASS + '__icon {\n' +
-        '    display: inline-flex;\n' +
-        '    align-items: center;\n' +
-        '    justify-content: center;\n' +
-        '    width: var(--dpad-arrow-icon-size);\n' +
-        '    height: var(--dpad-arrow-icon-size);\n' +
-        '    line-height: 0;\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_MIC + ' .' + DPAD_BTN_CLASS + '__icon {\n' +
-        '    width: var(--dpad-mic-icon-size);\n' +
-        '    height: var(--dpad-mic-icon-size);\n' +
-        '  }\n' +
-        '  .' + DPAD_BTN_CLASS + '__icon svg {\n' +
-        '    width: 100%;\n' +
-        '    height: 100%;\n' +
-        '    display: block;\n' +
-        '    pointer-events: none;\n' +
-        '  }\n' +
-        '';
+      // The dpad's CSS lives in a <template id="dpad-styles">
+      // block earlier in this file. Edit it like any other CSS;
+      // no JavaScript string manipulation is needed.
 
       // Render an icon entry (either {svg, rot} for chevrons, or a
       // plain SVG string for the mic) wrapped in a span with the
@@ -501,19 +523,22 @@
         // Idempotent: only build the shadow content once per
         // element instance. connectedCallback can fire multiple
         // times if the element is moved in the DOM; without this
-        // guard, each re-connection would append another <style>
-        // + <div class="dpad"> to the same shadow root, which
-        // visually stacks the dpad UI on top of itself.
+        // guard, each re-connection would append another copy of
+        // the styles and dpad DOM, which visually stacks the
+        // dpad UI on top of itself.
         if (this._mounted) return;
         this._mounted = true;
 
-        var style = document.createElement('style');
-        style.textContent = DPAD_STYLES;
+        // Adopt the plain-CSS template's content into the shadow
+        // root. This keeps the CSS as plain text in the file (easy
+        // to edit) while still getting it scoped to the shadow
+        // root. The :host block inside aliases HA design tokens,
+        // so theming still works.
+        var tpl = document.getElementById('dpad-styles');
+        this.shadowRoot.appendChild(tpl.content.cloneNode(true));
 
         var host = document.createElement('div');
         host.innerHTML = buildDpadHtml();
-
-        this.shadowRoot.appendChild(style);
         this.shadowRoot.appendChild(host.firstElementChild);
       };
 
