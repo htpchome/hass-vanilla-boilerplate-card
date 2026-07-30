@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.41";
+  const CARD_VERSION = "0.1.42";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1831,7 +1831,7 @@
   }
 
   @media (hover: hover) {
-    .slice-button:hover path {
+    :host(:not([data-input-mode="touch"])) .slice-button:hover path {
       fill: var(--circle-pad-primary);
     }
   }
@@ -1850,7 +1850,7 @@
   }
 
   @media (hover: hover) {
-    .slice-button:hover .slice-chevron {
+    :host(:not([data-input-mode="touch"])) .slice-button:hover .slice-chevron {
       stroke: #ffffff !important;
     }
   }
@@ -1884,7 +1884,7 @@
   /* Hover-only accent ring on desktop/trackpad without changing
      the mic's fill state. Toggle state remains class-driven. */
   @media (hover: hover) {
-    .center-button:hover {
+    :host(:not([data-input-mode="touch"])) .center-button:hover {
       filter: url(#green-glow-matrix);
     }
   }
@@ -2114,6 +2114,12 @@
       };
 
       this.shadowRoot.addEventListener("pointerdown", (ev) => {
+        if (ev.pointerType === "touch") {
+          this.setAttribute("data-input-mode", "touch");
+        } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
+          this.setAttribute("data-input-mode", "mouse");
+        }
+
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);

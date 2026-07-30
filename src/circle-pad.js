@@ -116,7 +116,7 @@ const CIRCLE_PAD_STYLES = `
   }
 
   @media (hover: hover) {
-    .slice-button:hover path {
+    :host(:not([data-input-mode="touch"])) .slice-button:hover path {
       fill: var(--circle-pad-primary);
     }
   }
@@ -135,7 +135,7 @@ const CIRCLE_PAD_STYLES = `
   }
 
   @media (hover: hover) {
-    .slice-button:hover .slice-chevron {
+    :host(:not([data-input-mode="touch"])) .slice-button:hover .slice-chevron {
       stroke: #ffffff !important;
     }
   }
@@ -169,7 +169,7 @@ const CIRCLE_PAD_STYLES = `
   /* Hover-only accent ring on desktop/trackpad without changing
      the mic's fill state. Toggle state remains class-driven. */
   @media (hover: hover) {
-    .center-button:hover {
+    :host(:not([data-input-mode="touch"])) .center-button:hover {
       filter: url(#green-glow-matrix);
     }
   }
@@ -399,6 +399,12 @@ class CirclePadControl extends HTMLElement {
     };
 
     this.shadowRoot.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType === "touch") {
+        this.setAttribute("data-input-mode", "touch");
+      } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
+        this.setAttribute("data-input-mode", "mouse");
+      }
+
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
