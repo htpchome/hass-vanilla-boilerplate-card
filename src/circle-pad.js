@@ -115,8 +115,10 @@ const CIRCLE_PAD_STYLES = `
     fill: var(--circle-pad-bg-1);
   }
 
-  .slice-button:hover path {
-    fill: var(--circle-pad-primary);
+  @media (hover: hover) {
+    .slice-button:hover path {
+      fill: var(--circle-pad-primary);
+    }
   }
 
   .slice-button:active path,
@@ -129,14 +131,15 @@ const CIRCLE_PAD_STYLES = `
     transition: stroke 0.15s ease;
   }
 
-  .slice-button:hover .slice-chevron,
   .slice-button:active .slice-chevron,
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }
 
-  .slice-button:not(:hover) .slice-chevron {
-    stroke: #555555 !important;
+  @media (hover: hover) {
+    .slice-button:hover .slice-chevron {
+      stroke: #ffffff !important;
+    }
   }
 
   .center-button #path9 {
@@ -163,6 +166,14 @@ const CIRCLE_PAD_STYLES = `
 
   .center-button.is-active {
     filter: url(#green-glow-matrix);
+  }
+
+  /* Hover-only accent ring on desktop/trackpad without changing
+     the mic's fill state. Toggle state remains class-driven. */
+  @media (hover: hover) {
+    .center-button:hover {
+      filter: url(#green-glow-matrix);
+    }
   }
 
   .wheel-button:focus path,

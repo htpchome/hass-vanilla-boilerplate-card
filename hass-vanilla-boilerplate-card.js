@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.39";
+  const CARD_VERSION = "0.1.40";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1830,8 +1830,10 @@
     fill: var(--circle-pad-bg-1);
   }
 
-  .slice-button:hover path {
-    fill: var(--circle-pad-primary);
+  @media (hover: hover) {
+    .slice-button:hover path {
+      fill: var(--circle-pad-primary);
+    }
   }
 
   .slice-button:active path,
@@ -1844,14 +1846,15 @@
     transition: stroke 0.15s ease;
   }
 
-  .slice-button:hover .slice-chevron,
   .slice-button:active .slice-chevron,
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }
 
-  .slice-button:not(:hover) .slice-chevron {
-    stroke: #555555 !important;
+  @media (hover: hover) {
+    .slice-button:hover .slice-chevron {
+      stroke: #ffffff !important;
+    }
   }
 
   .center-button #path9 {
@@ -1878,6 +1881,14 @@
 
   .center-button.is-active {
     filter: url(#green-glow-matrix);
+  }
+
+  /* Hover-only accent ring on desktop/trackpad without changing
+     the mic's fill state. Toggle state remains class-driven. */
+  @media (hover: hover) {
+    .center-button:hover {
+      filter: url(#green-glow-matrix);
+    }
   }
 
   .wheel-button:focus path,
@@ -3258,12 +3269,9 @@
    * Exported as a single tagged-template-friendly array of strings so
    * downstream code can `join('')` or stream into a <style> tag.
    */
-  const allStyles = [
-    baseStyles,
-    cardStyles,
-    navStyles,
-    statusStyles,
-  ].join('\n');
+  const allStyles = [baseStyles, cardStyles, navStyles, statusStyles].join(
+    "\n",
+  );
 
   /**
    * card.js
