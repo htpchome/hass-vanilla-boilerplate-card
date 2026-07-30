@@ -1393,7 +1393,12 @@
       "DPAD_DIAGONAL",
       "Up-left",
     );
-    const up = buildButtonHtml(DPAD_8WAY_ACTIONS.UP, DPAD_8WAY_BTN_UP, "DPAD_UP", "Up");
+    const up = buildButtonHtml(
+      DPAD_8WAY_ACTIONS.UP,
+      DPAD_8WAY_BTN_UP,
+      "DPAD_UP",
+      "Up",
+    );
     const upRight = buildButtonHtml(
       DPAD_8WAY_ACTIONS.UP_RIGHT,
       DPAD_8WAY_BTN_UP_RIGHT,
@@ -1658,7 +1663,8 @@
       root.addEventListener("click", (ev) => {
         const btn = findBtn(ev.target);
         if (!btn) return;
-        if (btn.getAttribute(DPAD_8WAY_DATA_ACTION) !== DPAD_8WAY_ACTIONS.MIC) return;
+        if (btn.getAttribute(DPAD_8WAY_DATA_ACTION) !== DPAD_8WAY_ACTIONS.MIC)
+          return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
         this._dispatch(EVT_TOGGLE, {
