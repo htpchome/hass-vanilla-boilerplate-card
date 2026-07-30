@@ -14,7 +14,7 @@
  * ---------------------------------------------------------------
  */
 
-import { LAYOUTS } from './constants.js';
+import { LAYOUTS } from "./constants.js";
 
 export class Router {
   constructor(initial = LAYOUTS.MAIN) {
@@ -75,7 +75,7 @@ export class Router {
    * @returns {() => void} unsubscribe
    */
   onViewChange(fn) {
-    if (typeof fn !== 'function') return () => {};
+    if (typeof fn !== "function") return () => {};
     this._listeners.add(fn);
     return () => this._listeners.delete(fn);
   }
@@ -90,7 +90,7 @@ export class Router {
         fn(detail);
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('[router] listener threw', err);
+        console.error("[router] listener threw", err);
       }
     });
   }

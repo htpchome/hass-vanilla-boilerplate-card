@@ -18,15 +18,15 @@ import {
   DEFAULTS,
   ERROR_KEYS,
   REGIONS,
-} from './constants.js';
+} from "./constants.js";
 import {
   assertValidConfig,
   fireHassAction,
   hasEntity,
   mergeDefaults,
   warnOnce,
-} from './helpers.js';
-import { Router } from './router.js';
+} from "./helpers.js";
+import { Router } from "./router.js";
 
 /**
  * Controller — pure logic, no DOM. Created per-card-instance.
@@ -60,7 +60,7 @@ export class CardController {
         fn();
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('[controller] listener threw', err);
+        console.error("[controller] listener threw", err);
       }
     });
   }
@@ -115,8 +115,8 @@ export class CardController {
    * @param {{states: Record<string, any>}} hass
    */
   setHass(hass) {
-    if (!hass || typeof hass !== 'object') {
-      warnOnce(ERROR_KEYS.MISSING_HASS, 'No hass object provided to card');
+    if (!hass || typeof hass !== "object") {
+      warnOnce(ERROR_KEYS.MISSING_HASS, "No hass object provided to card");
       return;
     }
     this._hass = hass;
@@ -158,30 +158,30 @@ export class CardController {
     if (!this._config.tap_action) return;
     // Pass the user's `tap_action` config (e.g.
     // { action: 'navigate', navigation_path: '/lovelace/0' }).
-    fireHassAction(node, 'tap', this._config.tap_action);
+    fireHassAction(node, "tap", this._config.tap_action);
   }
 
-    /**
-     * Default hold handler.
-     *
-     * @param {HTMLElement} node
-     * @param {MouseEvent} ev
-     */
-    handleHold(node, ev) {
-      if (!this._config.hold_action) return;
-      fireHassAction(node, 'hold', this._config.hold_action);
-    }
+  /**
+   * Default hold handler.
+   *
+   * @param {HTMLElement} node
+   * @param {MouseEvent} ev
+   */
+  handleHold(node, ev) {
+    if (!this._config.hold_action) return;
+    fireHassAction(node, "hold", this._config.hold_action);
+  }
 
-    /**
-     * Default double-tap handler.
-     *
-     * @param {HTMLElement} node
-     * @param {MouseEvent} ev
-     */
-    handleDoubleClick(node, ev) {
-      if (!this._config.double_tap_action) return;
-      fireHassAction(node, 'double_tap', this._config.double_tap_action);
-    }
+  /**
+   * Default double-tap handler.
+   *
+   * @param {HTMLElement} node
+   * @param {MouseEvent} ev
+   */
+  handleDoubleClick(node, ev) {
+    if (!this._config.double_tap_action) return;
+    fireHassAction(node, "double_tap", this._config.double_tap_action);
+  }
 
   /**
    * Convenience: safely read a state value from hass, returning

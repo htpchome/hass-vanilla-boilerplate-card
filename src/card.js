@@ -23,29 +23,26 @@ import {
   CARD_NAME,
   CARD_TYPE,
   DEFAULTS,
-} from './constants.js';
-import { CardController } from './controller.js';
+} from "./constants.js";
+import { CardController } from "./controller.js";
 // Importing dpad.js and readout.js for their side effects:
 // they register the <dpad-control> and <dpad-readout> custom
 // elements when these modules are loaded. The factory renders
 // both elements into the detail view's content area; each
 // module is a fully self-contained unit.
-import './dpad.js';
-import './readout.js';
-import { buildCardHtml } from './factory.js';
-import {
-  renderErrorMessage,
-  warnOnce,
-} from './helpers.js';
-import { Router } from './router.js';
-import { allStyles } from './styles.js';
+import "./dpad.js";
+import "./readout.js";
+import { buildCardHtml } from "./factory.js";
+import { renderErrorMessage, warnOnce } from "./helpers.js";
+import { Router } from "./router.js";
+import { allStyles } from "./styles.js";
 
 class HassVanillaBoilerplateCard extends HTMLElement {
   constructor() {
     super();
 
     // 1. Shadow DOM (required for style isolation).
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
 
     // 2. Controller (logic) and a render-scheduler reference.
     this._router = new Router();
@@ -61,7 +58,9 @@ class HassVanillaBoilerplateCard extends HTMLElement {
 
   connectedCallback() {
     this._mount();
-    this._unsubController = this._controller.subscribe(() => this._scheduleRender());
+    this._unsubController = this._controller.subscribe(() =>
+      this._scheduleRender(),
+    );
     this._unsubRouter = this._router.onViewChange(() => this._scheduleRender());
     this._scheduleRender();
   }
@@ -119,7 +118,10 @@ class HassVanillaBoilerplateCard extends HTMLElement {
    */
   async getPreviewCard() {
     // Ensure a default config is loaded before rendering.
-    if (!this._controller.config || Object.keys(this._controller.config).length === 0) {
+    if (
+      !this._controller.config ||
+      Object.keys(this._controller.config).length === 0
+    ) {
       this._controller.setConfig({ ...DEFAULTS });
     }
     // Re-render synchronously.
@@ -157,25 +159,31 @@ class HassVanillaBoilerplateCard extends HTMLElement {
   static getConfigForm() {
     return {
       schema: [
-        { name: 'title',    selector: { text: {} } },
-        { name: 'subtitle', selector: { text: {} } },
+        { name: "title", selector: { text: {} } },
+        { name: "subtitle", selector: { text: {} } },
         {
-          name: 'content',
+          name: "content",
           selector: { text: { multiline: true } },
         },
       ],
       computeLabel: (schema) => {
         switch (schema.name) {
-          case 'title':    return 'Title';
-          case 'subtitle': return 'Subtitle';
-          case 'content':  return 'Content (HTML markup)';
-          default:         return undefined;
+          case "title":
+            return "Title";
+          case "subtitle":
+            return "Subtitle";
+          case "content":
+            return "Content (HTML markup)";
+          default:
+            return undefined;
         }
       },
       computeHelper: (schema) => {
-        if (schema.name === 'content') {
-          return 'Accepts HTML markup. The card renders it inside its ' +
-                 'shadow DOM, so your styles are isolated from the dashboard.';
+        if (schema.name === "content") {
+          return (
+            "Accepts HTML markup. The card renders it inside its " +
+            "shadow DOM, so your styles are isolated from the dashboard."
+          );
         }
         return undefined;
       },
@@ -195,9 +203,9 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     if (!root) return;
 
     // Inject styles once.
-    if (!root.querySelector('style[data-card-styles]')) {
-      const style = document.createElement('style');
-      style.setAttribute('data-card-styles', '');
+    if (!root.querySelector("style[data-card-styles]")) {
+      const style = document.createElement("style");
+      style.setAttribute("data-card-styles", "");
       style.textContent = allStyles;
       root.appendChild(style);
     }
@@ -222,19 +230,19 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     //      listeners (only attached when the user has configured
     //      them in YAML). The controller's handlers are no-ops
     //      if the corresponding action isn't set.
-    if (!root.querySelector('[data-card-host]')) {
-      const host = document.createElement('div');
-      host.setAttribute('data-card-host', '');
+    if (!root.querySelector("[data-card-host]")) {
+      const host = document.createElement("div");
+      host.setAttribute("data-card-host", "");
 
       // (1) Internal header-nav arrow click delegation.
       //     Triggered by factory.js's <button data-card-nav="...">
       //     elements in the header.
-      host.addEventListener('click', (ev) => {
+      host.addEventListener("click", (ev) => {
         const target = ev.target;
         if (!(target instanceof Element)) return;
-        const btn = target.closest('[data-card-nav]');
+        const btn = target.closest("[data-card-nav]");
         if (!btn || !host.contains(btn)) return;
-        const view = btn.getAttribute('data-card-nav');
+        const view = btn.getAttribute("data-card-nav");
         if (view) this._router.navigate(view);
       });
 
@@ -248,22 +256,22 @@ class HassVanillaBoilerplateCard extends HTMLElement {
         // dpad-control lives in its own shadow root; the user's
         // tap_action will only fire for taps on the card's own
         // chrome outside the dpad.)
-        host.addEventListener('click', (ev) => {
+        host.addEventListener("click", (ev) => {
           const target = ev.target;
-          if (target instanceof Element && target.closest('[data-card-nav]')) {
+          if (target instanceof Element && target.closest("[data-card-nav]")) {
             return; // nav arrow click — handled above
           }
           this._controller.handleClick(this, ev);
         });
       }
       if (cfg.hold_action) {
-        host.addEventListener('contextmenu', (ev) => {
+        host.addEventListener("contextmenu", (ev) => {
           ev.preventDefault();
           this._controller.handleHold(this, ev);
         });
       }
       if (cfg.double_tap_action) {
-        host.addEventListener('dblclick', (ev) => {
+        host.addEventListener("dblclick", (ev) => {
           this._controller.handleDoubleClick(this, ev);
         });
       }
@@ -284,7 +292,7 @@ class HassVanillaBoilerplateCard extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
-    const host = this.shadowRoot.querySelector('[data-card-host]');
+    const host = this.shadowRoot.querySelector("[data-card-host]");
     if (!host) return;
 
     try {
@@ -310,7 +318,9 @@ class HassVanillaBoilerplateCard extends HTMLElement {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(`[${CARD_TYPE}] render failed`, err);
-      host.innerHTML = renderErrorMessage(`Render error: ${String(err.message || err)}`);
+      host.innerHTML = renderErrorMessage(
+        `Render error: ${String(err.message || err)}`,
+      );
     }
   }
 
@@ -325,19 +335,29 @@ class HassVanillaBoilerplateCard extends HTMLElement {
    */
   _wireDpadReadout(host) {
     if (!host) return;
-    const dpad = host.querySelector('dpad-control');
-    const readout = host.querySelector('dpad-readout');
+    const dpad = host.querySelector("dpad-control");
+    const readout = host.querySelector("dpad-readout");
     if (!dpad || !readout) return;
 
     // If we already wired these exact instances, nothing to do.
-    if (this._dpadReadoutWired && this._dpadReadoutWired.dpad === dpad &&
-        this._dpadReadoutWired.readout === readout) {
+    if (
+      this._dpadReadoutWired &&
+      this._dpadReadoutWired.dpad === dpad &&
+      this._dpadReadoutWired.readout === readout
+    ) {
       return;
     }
 
     // Otherwise (re-)subscribe. Disconnect any previous subscription first.
-    if (this._dpadReadoutWired && typeof this._dpadReadoutWired.off === 'function') {
-      try { this._dpadReadoutWired.off(); } catch (_e) { /* ignore */ }
+    if (
+      this._dpadReadoutWired &&
+      typeof this._dpadReadoutWired.off === "function"
+    ) {
+      try {
+        this._dpadReadoutWired.off();
+      } catch (_e) {
+        /* ignore */
+      }
     }
 
     const off = readout.subscribe(dpad);
@@ -349,12 +369,15 @@ class HassVanillaBoilerplateCard extends HTMLElement {
 // Registration
 // -----------------------------------------------------------
 
-if (!customElements.get('hass-vanilla-boilerplate-card')) {
-  customElements.define('hass-vanilla-boilerplate-card', HassVanillaBoilerplateCard);
+if (!customElements.get("hass-vanilla-boilerplate-card")) {
+  customElements.define(
+    "hass-vanilla-boilerplate-card",
+    HassVanillaBoilerplateCard,
+  );
 }
 
 // Register for the HA card picker dialog.
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.customCards = window.customCards || [];
   if (!window.customCards.some((c) => c && c.type === CARD_TYPE)) {
     window.customCards.push({
@@ -367,12 +390,15 @@ if (typeof window !== 'undefined') {
 }
 
 // Surface a single info message on first load to confirm install.
-if (typeof window !== 'undefined' && !window.__HASS_VANILLA_BOOTSTRAP_LOGGED__) {
+if (
+  typeof window !== "undefined" &&
+  !window.__HASS_VANILLA_BOOTSTRAP_LOGGED__
+) {
   window.__HASS_VANILLA_BOOTSTRAP_LOGGED__ = true;
   // eslint-disable-next-line no-console
   console.info(
     `%c[${CARD_TYPE}]`,
-    'color: #03a9f4; font-weight: bold;',
+    "color: #03a9f4; font-weight: bold;",
     `${CARD_NAME} registered.`,
   );
 }
