@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.52";
+  const CARD_VERSION = "0.1.53";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2216,10 +2216,11 @@
       const clearPressed = (btn) => {
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this.#pressed.has(action)) return;
-        this.#pressed.delete(action);
         btn.classList.remove("is-pressed");
         btn.querySelector(".slice-chevron")?.classList.remove("is-pressed");
+        if (!this.#pressed.has(action)) return false;
+        this.#pressed.delete(action);
+        return true;
       };
 
       const clearHovered = (btn) => {
@@ -2229,8 +2230,6 @@
       };
 
       const clearAllPressed = (emitRelease = true) => {
-        if (!this.#pressed.size) return;
-
         const pressedActions = [...this.#pressed];
         if (this.shadowRoot) {
           this.shadowRoot
@@ -2241,6 +2240,7 @@
             });
         }
 
+        if (!this.#pressed.size && !pressedActions.length) return;
         this.#pressed.clear();
         this.#pressedByPointer.clear();
 
@@ -2310,8 +2310,10 @@
         const state = this.#pressedByPointer.get(ev.pointerId);
         if (!state) return false;
         this.#pressedByPointer.delete(ev.pointerId);
-        clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE, { action: state.action });
+        const released = clearPressed(state.btn);
+        if (released) {
+          this._dispatch(EVT_RELEASE, { action: state.action });
+        }
         syncHoveredFromPoint(ev);
         return true;
       };
@@ -2411,8 +2413,8 @@
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this.#pressed.has(action)) return;
-        clearPressed(btn);
+        const released = clearPressed(btn);
+        if (!released) return;
         this._dispatch(EVT_RELEASE, { action });
         syncHoveredFromPoint(ev);
       };
@@ -2455,8 +2457,8 @@
           if (!btn) return;
           if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-          if (!this.#pressed.has(action)) return;
-          clearPressed(btn);
+          const released = clearPressed(btn);
+          if (!released) return;
           this._dispatch(EVT_RELEASE, { action });
         },
         listenerOpts,
@@ -2483,8 +2485,8 @@
           const btn = findBtn(ev.target);
           if (!btn) return;
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-          if (!this.#pressed.has(action)) return;
-          clearPressed(btn);
+          const released = clearPressed(btn);
+          if (!released) return;
           this._dispatch(EVT_RELEASE, { action });
         },
         listenerOpts,

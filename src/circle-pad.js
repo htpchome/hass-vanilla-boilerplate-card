@@ -501,10 +501,11 @@ class CirclePadControl extends HTMLElement {
     const clearPressed = (btn) => {
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this.#pressed.has(action)) return;
-      this.#pressed.delete(action);
       btn.classList.remove("is-pressed");
       btn.querySelector(".slice-chevron")?.classList.remove("is-pressed");
+      if (!this.#pressed.has(action)) return false;
+      this.#pressed.delete(action);
+      return true;
     };
 
     const clearHovered = (btn) => {
@@ -514,8 +515,6 @@ class CirclePadControl extends HTMLElement {
     };
 
     const clearAllPressed = (emitRelease = true) => {
-      if (!this.#pressed.size) return;
-
       const pressedActions = [...this.#pressed];
       if (this.shadowRoot) {
         this.shadowRoot
@@ -526,6 +525,7 @@ class CirclePadControl extends HTMLElement {
           });
       }
 
+      if (!this.#pressed.size && !pressedActions.length) return;
       this.#pressed.clear();
       this.#pressedByPointer.clear();
 
@@ -595,8 +595,10 @@ class CirclePadControl extends HTMLElement {
       const state = this.#pressedByPointer.get(ev.pointerId);
       if (!state) return false;
       this.#pressedByPointer.delete(ev.pointerId);
-      clearPressed(state.btn);
-      this._dispatch(EVT_RELEASE, { action: state.action });
+      const released = clearPressed(state.btn);
+      if (released) {
+        this._dispatch(EVT_RELEASE, { action: state.action });
+      }
       syncHoveredFromPoint(ev);
       return true;
     };
@@ -696,8 +698,8 @@ class CirclePadControl extends HTMLElement {
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this.#pressed.has(action)) return;
-      clearPressed(btn);
+      const released = clearPressed(btn);
+      if (!released) return;
       this._dispatch(EVT_RELEASE, { action });
       syncHoveredFromPoint(ev);
     };
@@ -740,8 +742,8 @@ class CirclePadControl extends HTMLElement {
         if (!btn) return;
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this.#pressed.has(action)) return;
-        clearPressed(btn);
+        const released = clearPressed(btn);
+        if (!released) return;
         this._dispatch(EVT_RELEASE, { action });
       },
       listenerOpts,
@@ -768,8 +770,8 @@ class CirclePadControl extends HTMLElement {
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this.#pressed.has(action)) return;
-        clearPressed(btn);
+        const released = clearPressed(btn);
+        if (!released) return;
         this._dispatch(EVT_RELEASE, { action });
       },
       listenerOpts,
