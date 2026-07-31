@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.49";
+  const CARD_VERSION = "0.1.50";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2227,6 +2227,25 @@
         btn.classList.remove("is-hovered");
       };
 
+      const clearAllPressed = (emitRelease = true) => {
+        if (!this.#pressed.size) return;
+
+        const pressedActions = [...this.#pressed];
+        if (this.shadowRoot) {
+          this.shadowRoot
+            .querySelectorAll(".slice-button.is-pressed")
+            .forEach((el) => el.classList.remove("is-pressed"));
+        }
+
+        this.#pressed.clear();
+        this.#pressedByPointer.clear();
+
+        if (!emitRelease) return;
+        pressedActions.forEach((action) => {
+          this._dispatch(EVT_RELEASE, { action });
+        });
+      };
+
       const clearAllHovered = () => {
         if (!this.shadowRoot) return;
         this.shadowRoot
@@ -2240,7 +2259,10 @@
           return;
         }
         if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-        if (!this.shadowRoot || typeof this.shadowRoot.elementFromPoint !== "function") {
+        if (
+          !this.shadowRoot ||
+          typeof this.shadowRoot.elementFromPoint !== "function"
+        ) {
           clearAllHovered();
           return;
         }
@@ -2288,6 +2310,9 @@
             clearAllHovered();
           } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
             this._setInputMode("mouse");
+            if (this.#pressed.size && !this.#pressedByPointer.has(ev.pointerId)) {
+              clearAllPressed(true);
+            }
           }
 
           const btn = findBtn(ev.target);
@@ -2305,6 +2330,21 @@
               /* ignore */
             }
           }
+        },
+        listenerOpts,
+      );
+
+      this.shadowRoot.addEventListener(
+        "pointermove",
+        (ev) => {
+          if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
+          if (ev.buttons !== 0) return;
+
+          if (this.#pressed.size) {
+            // Safety net: if a release event was missed, recover immediately.
+            clearAllPressed(true);
+          }
+          syncHoveredFromPoint(ev);
         },
         listenerOpts,
       );
@@ -2356,10 +2396,23 @@
       this.shadowRoot.addEventListener(
         "pointerleave",
         () => {
+          clearAllPressed(true);
           clearAllHovered();
         },
         listenerOpts,
       );
+
+      const hostWindow = this.ownerDocument?.defaultView;
+      if (hostWindow) {
+        hostWindow.addEventListener(
+          "blur",
+          () => {
+            clearAllPressed(true);
+            clearAllHovered();
+          },
+          listenerOpts,
+        );
+      }
 
       this.shadowRoot.addEventListener(
         "pointerleave",
