@@ -8,7 +8,7 @@
  */
 
 // ---------- Card identity ----------
-export const CARD_VERSION = "0.1.83";
+export const CARD_VERSION = "0.1.84";
 export const CARD_TYPE = "hass-vanilla-boilerplate-card";
 export const CARD_NAME = "HASS Vanilla Boilerplate Card";
 export const CARD_DESCRIPTION =

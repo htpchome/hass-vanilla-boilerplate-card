@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.83";
+  const CARD_VERSION = "0.1.84";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1764,6 +1764,8 @@
   const EVT_TOGGLE = "circle-pad-toggle";
   const INPUT_MODE_TOUCH = "touch";
   const INPUT_MODE_MOUSE = "mouse";
+  const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
+  const CENTER_BUTTON_SELECTOR = ".center-button";
 
   const ROOT_EVENT_BINDINGS = Object.freeze([
     ["pointerdown", "_onPointerDown"],
@@ -2160,7 +2162,7 @@
 
     _applyMicState() {
       if (!this.shadowRoot) return;
-      const mic = this.shadowRoot.querySelector(".center-button");
+      const mic = this.shadowRoot.querySelector(CENTER_BUTTON_SELECTOR);
       if (!mic) return;
       mic.classList.toggle("is-active", this._activeMic);
       mic.setAttribute("aria-pressed", String(this._activeMic));
@@ -2215,7 +2217,7 @@
 
     _findActionButton(target) {
       if (!(target instanceof Element)) return null;
-      return target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
+      return target.closest(ACTION_SELECTOR);
     }
 
     _getButtonAction(btn) {
@@ -2295,7 +2297,11 @@
 
       const btn = this._findActionButton(ev.target);
       if (!btn) return;
-      if (ignoreRelatedTarget && ev.relatedTarget && btn.contains(ev.relatedTarget)) {
+      if (
+        ignoreRelatedTarget &&
+        ev.relatedTarget &&
+        btn.contains(ev.relatedTarget)
+      ) {
         return;
       }
 

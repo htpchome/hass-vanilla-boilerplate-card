@@ -49,6 +49,8 @@ const EVT_RELEASE = "circle-pad-release";
 const EVT_TOGGLE = "circle-pad-toggle";
 const INPUT_MODE_TOUCH = "touch";
 const INPUT_MODE_MOUSE = "mouse";
+const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
+const CENTER_BUTTON_SELECTOR = ".center-button";
 
 const ROOT_EVENT_BINDINGS = Object.freeze([
   ["pointerdown", "_onPointerDown"],
@@ -445,7 +447,7 @@ class CirclePadControl extends HTMLElement {
 
   _applyMicState() {
     if (!this.shadowRoot) return;
-    const mic = this.shadowRoot.querySelector(".center-button");
+    const mic = this.shadowRoot.querySelector(CENTER_BUTTON_SELECTOR);
     if (!mic) return;
     mic.classList.toggle("is-active", this._activeMic);
     mic.setAttribute("aria-pressed", String(this._activeMic));
@@ -500,7 +502,7 @@ class CirclePadControl extends HTMLElement {
 
   _findActionButton(target) {
     if (!(target instanceof Element)) return null;
-    return target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
+    return target.closest(ACTION_SELECTOR);
   }
 
   _getButtonAction(btn) {
