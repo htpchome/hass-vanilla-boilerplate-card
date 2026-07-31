@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.71";
+  const CARD_VERSION = "0.1.72";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1761,7 +1761,6 @@
 
   const EVT_TOGGLE = "circle-pad-toggle";
 
-
   const CIRCLE_PAD_STYLES = `
   :host {
     display: block;
@@ -1836,6 +1835,23 @@
 .center-button:hover #path9 { fill: var(--circle-pad-success); }
 .center-button:focus #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
+
+/* Persistent mic-on visuals driven by component state */
+.center-button.is-active #circle9 {
+  fill: url(#dome-gradient-green);
+}
+
+.center-button.is-active #path9 {
+  fill: var(--circle-pad-success);
+}
+
+.center-button.is-active .mic-icon path {
+  fill: var(--circle-pad-text-1) !important;
+}
+
+.center-button.is-active {
+  filter: url(#green-glow-matrix);
+}
 
 .main-circle {filter: url(#outside-shadow);}
 .main-circle circle {

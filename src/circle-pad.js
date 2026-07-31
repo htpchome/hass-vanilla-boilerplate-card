@@ -121,6 +121,23 @@ const CIRCLE_PAD_STYLES = `
 .center-button:focus #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
 
+/* Persistent mic-on visuals driven by component state */
+.center-button.is-active #circle9 {
+  fill: url(#dome-gradient-green);
+}
+
+.center-button.is-active #path9 {
+  fill: var(--circle-pad-success);
+}
+
+.center-button.is-active .mic-icon path {
+  fill: var(--circle-pad-text-1) !important;
+}
+
+.center-button.is-active {
+  filter: url(#green-glow-matrix);
+}
+
 .main-circle {filter: url(#outside-shadow);}
 .main-circle circle {
   shape-rendering: geometricPrecision;
