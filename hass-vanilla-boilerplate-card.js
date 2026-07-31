@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.51";
+  const CARD_VERSION = "0.1.52";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1965,8 +1965,12 @@
     transition: stroke ${releaseMs}ms ease-out;
   }
 
-  .slice-button.is-pressed .slice-chevron {
+  .slice-chevron.is-pressed,
+  .slice-chevron.is-hovered {
     stroke: #ffffff !important;
+  }
+
+  .slice-chevron.is-pressed {
     /* Faster press-in so taps feel immediate */
     transition-duration: ${pressInMs}ms;
     transition-timing-function: ease-in;
@@ -1987,14 +1991,8 @@
     fill: var(--circle-pad-dark-primary) !important;
   }
 
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-chevron.is-pressed {
     stroke: #ffffff !important;
-  }
-
-  @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered .slice-chevron {
-      stroke: #ffffff !important;
-    }
   }
 
   .center-button #path9 {
@@ -2221,11 +2219,13 @@
         if (!this.#pressed.has(action)) return;
         this.#pressed.delete(action);
         btn.classList.remove("is-pressed");
+        btn.querySelector(".slice-chevron")?.classList.remove("is-pressed");
       };
 
       const clearHovered = (btn) => {
         if (!btn) return;
         btn.classList.remove("is-hovered");
+        btn.querySelector(".slice-chevron")?.classList.remove("is-hovered");
       };
 
       const clearAllPressed = (emitRelease = true) => {
@@ -2235,7 +2235,10 @@
         if (this.shadowRoot) {
           this.shadowRoot
             .querySelectorAll(".slice-button.is-pressed")
-            .forEach((el) => el.classList.remove("is-pressed"));
+            .forEach((el) => {
+              el.classList.remove("is-pressed");
+              el.querySelector(".slice-chevron")?.classList.remove("is-pressed");
+            });
         }
 
         this.#pressed.clear();
@@ -2251,7 +2254,10 @@
         if (!this.shadowRoot) return;
         this.shadowRoot
           .querySelectorAll(".slice-button.is-hovered")
-          .forEach((el) => el.classList.remove("is-hovered"));
+          .forEach((el) => {
+            el.classList.remove("is-hovered");
+            el.querySelector(".slice-chevron")?.classList.remove("is-hovered");
+          });
       };
 
       const syncHoveredFromPoint = (ev) => {
@@ -2276,6 +2282,7 @@
         const hoveredAction = hoveredBtn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(hoveredAction)) return;
         hoveredBtn.classList.add("is-hovered");
+        hoveredBtn.querySelector(".slice-chevron")?.classList.add("is-hovered");
       };
 
       const syncHoveredFromLastPointer = () => {
@@ -2318,6 +2325,7 @@
           this.#pressedByPointer.set(pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
+        btn.querySelector(".slice-chevron")?.classList.add("is-pressed");
         this._dispatch(EVT_PRESS, { action });
       };
 
@@ -2380,6 +2388,7 @@
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
           if (!DIRECTION_ACTIONS.has(action)) return;
           btn.classList.add("is-hovered");
+          btn.querySelector(".slice-chevron")?.classList.add("is-hovered");
         },
         listenerOpts,
       );
