@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.60";
+  const CARD_VERSION = "0.1.62";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1950,6 +1950,10 @@
     .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered path {
       fill: var(--circle-pad-primary);
     }
+
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered .slice-chevron {
+      stroke: #ffffff;
+    }
   }
 
   .slice-button.is-pressed path {
@@ -2116,7 +2120,6 @@
     #rootEl = null;
     #styleEl = null;
     #options = { ...DEFAULT_OPTIONS };
-    #lastPointerState = null;
 
     constructor() {
       super();
@@ -2243,55 +2246,6 @@
         }
       };
 
-      const clearAllHovered = () => {
-        if (!this.shadowRoot) return;
-        this.shadowRoot
-          .querySelectorAll(".slice-button.is-hovered")
-          .forEach((el) => setHoveredVisual(el, false));
-      };
-
-      const syncHoveredFromPoint = (ev) => {
-        if (!ev) {
-          clearAllHovered();
-          return;
-        }
-        if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-        if (
-          !this.shadowRoot ||
-          typeof this.shadowRoot.elementFromPoint !== "function"
-        ) {
-          clearAllHovered();
-          return;
-        }
-
-        const hit = this.shadowRoot.elementFromPoint(ev.clientX, ev.clientY);
-        const hoveredBtn = findBtn(hit);
-        clearAllHovered();
-        if (!hoveredBtn) return;
-
-        const hoveredAction = hoveredBtn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!DIRECTION_ACTIONS.has(hoveredAction)) return;
-        setHoveredVisual(hoveredBtn, true);
-      };
-
-      const syncHoveredFromLastPointer = () => {
-        if (!this.#lastPointerState) {
-          clearAllHovered();
-          return;
-        }
-        syncHoveredFromPoint(this.#lastPointerState);
-      };
-
-      const rememberPointerState = (ev) => {
-        if (!ev) return;
-        if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-        this.#lastPointerState = {
-          pointerType: ev.pointerType,
-          clientX: ev.clientX,
-          clientY: ev.clientY,
-        };
-      };
-
       const releaseByPointer = (ev) => {
         if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
           return false;
@@ -2304,7 +2258,6 @@
         if (released) {
           this._dispatch(EVT_RELEASE, { action });
         }
-        syncHoveredFromPoint(ev);
         return true;
       };
 
@@ -2330,10 +2283,8 @@
       this.shadowRoot.addEventListener(
         "pointerdown",
         (ev) => {
-          rememberPointerState(ev);
           if (ev.pointerType === "touch") {
             this._setInputMode("touch");
-            clearAllHovered();
           } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
             this._setInputMode("mouse");
             if (
@@ -2365,26 +2316,9 @@
       );
 
       this.shadowRoot.addEventListener(
-        "pointermove",
-        (ev) => {
-          if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-          rememberPointerState(ev);
-          if (ev.buttons !== 0) return;
-
-          if (this.#activeDirectionBtn) {
-            // Safety net: if a release event was missed, recover immediately.
-            clearAllPressed(true);
-          }
-          syncHoveredFromPoint(ev);
-        },
-        listenerOpts,
-      );
-
-      this.shadowRoot.addEventListener(
         "pointerover",
         (ev) => {
           if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-          rememberPointerState(ev);
           const btn = findBtn(ev.target);
           if (!btn) return;
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
@@ -2398,7 +2332,6 @@
         "pointerout",
         (ev) => {
           if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-          rememberPointerState(ev);
           const btn = findBtn(ev.target);
           if (!btn) return;
           if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
@@ -2415,54 +2348,9 @@
         const released = clearPressed(btn);
         if (!released) return;
         this._dispatch(EVT_RELEASE, { action });
-        syncHoveredFromPoint(ev);
       };
       this.shadowRoot.addEventListener("pointerup", release, listenerOpts);
       this.shadowRoot.addEventListener("pointercancel", release, listenerOpts);
-      this.shadowRoot.addEventListener(
-        "lostpointercapture",
-        (ev) => {
-          syncHoveredFromPoint(ev);
-        },
-        listenerOpts,
-      );
-      this.shadowRoot.addEventListener(
-        "pointerleave",
-        (ev) => {
-          rememberPointerState(ev);
-          clearAllPressed(true);
-          clearAllHovered();
-        },
-        listenerOpts,
-      );
-
-      const hostWindow = this.ownerDocument?.defaultView;
-      if (hostWindow) {
-        hostWindow.addEventListener(
-          "blur",
-          () => {
-            clearAllPressed(true);
-            clearAllHovered();
-          },
-          listenerOpts,
-        );
-      }
-
-      this.shadowRoot.addEventListener(
-        "pointerleave",
-        (ev) => {
-          if (releaseByPointer(ev)) return;
-          const btn = findBtn(ev.target);
-          if (!btn) return;
-          if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-          const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-          const released = clearPressed(btn);
-          if (!released) return;
-          this._dispatch(EVT_RELEASE, { action });
-        },
-        listenerOpts,
-      );
-
       this.shadowRoot.addEventListener(
         "keydown",
         (ev) => {
@@ -2499,7 +2387,6 @@
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
           if (action !== CIRCLE_PAD_ACTIONS.MIC) {
             clearAllPressed(false);
-            syncHoveredFromLastPointer();
             return;
           }
           this.#activeMic = !this.#activeMic;
