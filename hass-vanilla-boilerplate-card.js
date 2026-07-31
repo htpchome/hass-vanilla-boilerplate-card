@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.57";
+  const CARD_VERSION = "0.1.58";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1837,7 +1837,7 @@
         '"></path>' +
         '<path class="slice-chevron" d="' +
         slice.chevronPath +
-          '" fill="none" stroke="#555555" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+        '" fill="none" stroke="#555555" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
         "</g>",
     ).join("");
 
@@ -2202,7 +2202,10 @@
         const chevron = getChevron(btn);
         if (chevron) {
           chevron.style.stroke = pressed ? "#ffffff" : "#555555";
-          chevron.style.transition = `stroke ${pressed ? pressInMs : releaseMs}ms ${
+          const duration = pressed
+            ? this.#options.pressInMs
+            : this.#options.releaseMs;
+          chevron.style.transition = `stroke ${duration}ms ${
           pressed ? "ease-in" : "ease-out"
         }`;
         }
@@ -2214,7 +2217,7 @@
         const chevron = getChevron(btn);
         if (chevron && !btn.classList.contains("is-pressed")) {
           chevron.style.stroke = hovered ? "#ffffff" : "#555555";
-          chevron.style.transition = `stroke ${releaseMs}ms ease-out`;
+          chevron.style.transition = `stroke ${this.#options.releaseMs}ms ease-out`;
         }
       };
 

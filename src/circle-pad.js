@@ -487,7 +487,10 @@ class CirclePadControl extends HTMLElement {
       const chevron = getChevron(btn);
       if (chevron) {
         chevron.style.stroke = pressed ? "#ffffff" : "#555555";
-        chevron.style.transition = `stroke ${pressed ? pressInMs : releaseMs}ms ${
+        const duration = pressed
+          ? this.#options.pressInMs
+          : this.#options.releaseMs;
+        chevron.style.transition = `stroke ${duration}ms ${
           pressed ? "ease-in" : "ease-out"
         }`;
       }
@@ -499,7 +502,7 @@ class CirclePadControl extends HTMLElement {
       const chevron = getChevron(btn);
       if (chevron && !btn.classList.contains("is-pressed")) {
         chevron.style.stroke = hovered ? "#ffffff" : "#555555";
-        chevron.style.transition = `stroke ${releaseMs}ms ease-out`;
+        chevron.style.transition = `stroke ${this.#options.releaseMs}ms ease-out`;
       }
     };
 
