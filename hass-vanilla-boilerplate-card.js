@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.62";
+  const CARD_VERSION = "0.1.64";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1937,7 +1937,7 @@
 
   .wheel-button path,
   .wheel-button circle {
-    transition: fill 0.2s ease, filter 0.2s ease;
+    transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   }
 
   .slice-button path {
@@ -1947,13 +1947,20 @@
   }
 
   @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered path {
+    .slice-button:hover path {
       fill: var(--circle-pad-primary);
     }
 
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered .slice-chevron {
+    .slice-button:hover .slice-chevron {
       stroke: #ffffff;
     }
+  }
+
+  .slice-button:active path {
+    fill: var(--circle-pad-dark-primary);
+    /* Faster press-in so taps feel immediate */
+    transition-duration: ${pressInMs}ms;
+    transition-timing-function: ease-in;
   }
 
   .slice-button.is-pressed path {
@@ -1961,6 +1968,25 @@
     /* Faster press-in so taps feel immediate */
     transition-duration: ${pressInMs}ms;
     transition-timing-function: ease-in;
+  }
+
+  .slice-button:active .slice-chevron,
+  .slice-button:focus .slice-chevron,
+  .slice-button:focus-visible .slice-chevron {
+    stroke: #ffffff;
+  }
+
+  .slice-button.is-pressed .slice-chevron {
+    stroke: #ffffff;
+  }
+
+  .slice-button:focus path,
+  .slice-button:focus-visible path {
+    fill: var(--circle-pad-primary);
+  }
+
+  .slice-button:not(:hover) .slice-chevron {
+    stroke: #555555;
   }
 
   /* Touch safety override: some mobile browsers leave pseudo
@@ -1974,7 +2000,7 @@
     stroke: #555555 !important;
   }
 
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button:active path {
     fill: var(--circle-pad-dark-primary) !important;
   }
 
@@ -2014,6 +2040,11 @@
 
   .wheel-button:focus path,
   .wheel-button:focus circle {
+    stroke: none;
+  }
+
+  .wheel-button:focus-visible path,
+  .wheel-button:focus-visible circle {
     stroke: none;
   }
 
