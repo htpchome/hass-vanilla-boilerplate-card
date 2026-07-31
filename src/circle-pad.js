@@ -146,15 +146,12 @@ const CIRCLE_PAD_STYLES = `
 /* Green Dome Focus State (Keyboard Navigation) */
 .center-button:focus #circle9,
 .center-button:focus-within #circle9 { 
-  fill: url(#dome-gradient-green); 
   outline: none; /* Clears default browser ring if you are using your own filters */
 }
 
 /* Green Dome Active State (Pressed Click) */
 .center-button:active #circle9 { 
-  /* Slightly darker green fallback or an explicit deeper gradient shift */
-  fill: url(#dome-gradient-green); 
-  filter: brightness(0.92) url(#button-shadow); /* Clean way to simulate a physical press */
+  filter: brightness(0.92) url(#button-shadow-hover); /* Pressed visual without forcing active green state */
 }
 
 /* Standalone shadow layer applied exclusively over the center button structure in base state */
@@ -171,13 +168,6 @@ const CIRCLE_PAD_STYLES = `
   stroke-width: 2;          /* Thickness of the shadow */
   opacity: 0.15;            /* Softness/transparency of the shadow */
   filter: url(#simple-blur); /* Applies the blur effect */
-}
-
-/* ADDED: Activates the intense green neon inner/outer blend matrices across targeted states */
-.center-button:hover,
-.center-button:focus,
-.center-button:active {
-  filter: url(#green-glow-matrix);
 }
 
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
