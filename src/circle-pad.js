@@ -201,19 +201,39 @@ const CIRCLE_PAD_STYLES = `
 }
 
 /* --- Fixed Microphone State Handling --- */
-.mic-icon path {
+.mic-icon path,
+.mic-off-icon path {
   fill: var(--circle-pad-text-2); /* Gray base state */
   transition: fill 0.2s ease;
 }
 
+.mic-icon {
+  display: none;
+}
+
+.mic-off-icon {
+  display: inline;
+}
+
+.center-button.is-active .mic-icon {
+  display: inline;
+}
+
+.center-button.is-active .mic-off-icon {
+  display: none;
+}
+
 /* Forces the icon to turn pure black when hovered, focused, or active */
 .center-button:focus-visible .mic-icon path,
-.center-button:active .mic-icon path {
+.center-button:focus-visible .mic-off-icon path,
+.center-button:active .mic-icon path,
+.center-button:active .mic-off-icon path {
   fill: var(--circle-pad-text-1) !important; 
 }
 
 @media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-icon path {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-icon path,
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-off-icon path {
     fill: var(--circle-pad-text-1) !important;
   }
 }
@@ -277,6 +297,10 @@ const CIRCLE_PAD_STYLES = `
 }
 
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) .mic-icon path {
+  fill: var(--circle-pad-text-2) !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) .mic-off-icon path {
   fill: var(--circle-pad-text-2) !important;
 }
 `;
@@ -384,6 +408,9 @@ const CIRCLE_PAD_SVG = `
           <circle id="circle9" cx="96.940613" cy="66.8853" r="19.75" fill="url(#dome-gradient)" filter="url(#button-shadow)"></circle>
           <g clip-path="url(#circle-clip)">
             <circle class="inner-shadow-overlay" cx="96.940613" cy="68.8853" r="19.75"></circle>
+          </g>
+          <g class="mic-off-icon" transform="translate(90.440613, 60.3853) scale(0.55)">
+            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.17l5.98 6zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.41 1.41c-.64.42-1.39.67-2.06.67-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.93L19.73 21 21 19.73 4.27 3z"></path>
           </g>
           <g class="mic-icon" transform="translate(90.440613, 60.3853) scale(0.55)">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.34 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"></path>
