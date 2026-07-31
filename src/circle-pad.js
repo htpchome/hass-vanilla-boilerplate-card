@@ -580,7 +580,11 @@ class CirclePadControl extends HTMLElement {
 
     const btn = this._findActionButton(ev.target);
     if (!btn) return;
-    if (ignoreRelatedTarget && ev.relatedTarget && btn.contains(ev.relatedTarget)) {
+    if (
+      ignoreRelatedTarget &&
+      ev.relatedTarget &&
+      btn.contains(ev.relatedTarget)
+    ) {
       return;
     }
 
