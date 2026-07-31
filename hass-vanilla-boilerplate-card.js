@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.67";
+  const CARD_VERSION = "0.1.68";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -586,9 +586,9 @@
   });
 
   // Custom events dispatched on the host element.
-  const EVT_PRESS$2 = "dpad-press";
-  const EVT_RELEASE$2 = "dpad-release";
-  const EVT_TOGGLE$2 = "dpad-toggle";
+  const EVT_PRESS$1 = "dpad-press";
+  const EVT_RELEASE$1 = "dpad-release";
+  const EVT_TOGGLE$1 = "dpad-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -974,7 +974,7 @@
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE$2, { action: state.action });
+        this._dispatch(EVT_RELEASE$1, { action: state.action });
         return true;
       };
 
@@ -989,7 +989,7 @@
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS$2, { action });
+        this._dispatch(EVT_PRESS$1, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
         if (
@@ -1012,7 +1012,7 @@
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$2, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       };
       root.addEventListener("pointerup", release);
       root.addEventListener("pointercancel", release);
@@ -1025,7 +1025,7 @@
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(DPAD_DATA_ACTION);
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$2, { action });
+        this._dispatch(EVT_RELEASE$1, { action });
       });
 
       // click: toggle the mic button
@@ -1035,7 +1035,7 @@
         if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE$2, {
+        this._dispatch(EVT_TOGGLE$1, {
           action: DPAD_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1142,9 +1142,9 @@
   // Custom events dispatched on the host element. Use 8way-infixed
   // event names so a single page can have both a <dpad-control>
   // and a <dpad-8way-control> without event name collisions.
-  const EVT_PRESS$1 = "dpad-8way-press";
-  const EVT_RELEASE$1 = "dpad-8way-release";
-  const EVT_TOGGLE$1 = "dpad-8way-toggle";
+  const EVT_PRESS = "dpad-8way-press";
+  const EVT_RELEASE = "dpad-8way-release";
+  const EVT_TOGGLE = "dpad-8way-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -1607,7 +1607,7 @@
         if (!state) return false;
         this._pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE$1, { action: state.action });
+        this._dispatch(EVT_RELEASE, { action: state.action });
         return true;
       };
 
@@ -1622,7 +1622,7 @@
           this._pressedByPointer.set(ev.pointerId, { action, btn });
         }
         btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS$1, { action });
+        this._dispatch(EVT_PRESS, { action });
         // Capture pointer so we still receive pointerup if the user
         // drags off the button (common on touch).
         if (
@@ -1645,7 +1645,7 @@
         const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
         if (!this._pressed.has(action)) return;
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$1, { action });
+        this._dispatch(EVT_RELEASE, { action });
       };
       root.addEventListener("pointerup", release);
       root.addEventListener("pointercancel", release);
@@ -1658,7 +1658,7 @@
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(DPAD_8WAY_DATA_ACTION);
         clearPressed(btn);
-        this._dispatch(EVT_RELEASE$1, { action });
+        this._dispatch(EVT_RELEASE, { action });
       });
 
       // click: toggle the mic button
@@ -1669,7 +1669,7 @@
           return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE$1, {
+        this._dispatch(EVT_TOGGLE, {
           action: DPAD_8WAY_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1746,7 +1746,7 @@
     MIC: "mic",
   });
 
-  const DIRECTION_ACTIONS = Object.freeze(
+  Object.freeze(
     new Set([
       CIRCLE_PAD_ACTIONS.UP,
       CIRCLE_PAD_ACTIONS.UP_RIGHT,
@@ -1759,9 +1759,6 @@
     ]),
   );
 
-  const EVT_PRESS = "circle-pad-press";
-  const EVT_RELEASE = "circle-pad-release";
-  const EVT_TOGGLE = "circle-pad-toggle";
 
   const CIRCLE_PAD_STYLES = `
   :host {
@@ -2042,7 +2039,6 @@
 
     connectedCallback() {
       this._mount();
-      this._wireEvents();
     }
 
     disconnectedCallback() {
@@ -2074,129 +2070,6 @@
       this.shadowRoot.appendChild(style);
       this.shadowRoot.appendChild(root);
       this._applyMicState();
-    }
-
-    _wireEvents() {
-      if (this._wired || !this.shadowRoot) return;
-      this._wired = true;
-
-      const findBtn = (target) =>
-        target instanceof Element
-          ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
-          : null;
-
-      const clearPressed = (btn) => {
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
-        this._pressed.delete(action);
-        btn.classList.remove("is-pressed");
-      };
-
-      const releaseByPointer = (ev) => {
-        if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
-          return false;
-        }
-        const state = this._pressedByPointer.get(ev.pointerId);
-        if (!state) return false;
-        this._pressedByPointer.delete(ev.pointerId);
-        clearPressed(state.btn);
-        this._dispatch(EVT_RELEASE, { action: state.action });
-        return true;
-      };
-
-      const pressDirection = (btn, pointerId) => {
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!DIRECTION_ACTIONS.has(action)) return;
-        if (this._pressed.has(action)) return;
-        this._pressed.add(action);
-        if (pointerId !== null && pointerId !== undefined) {
-          this._pressedByPointer.set(pointerId, { action, btn });
-        }
-        btn.classList.add("is-pressed");
-        this._dispatch(EVT_PRESS, { action });
-      };
-
-      this.shadowRoot.addEventListener("pointerdown", (ev) => {
-        if (ev.pointerType === "touch") {
-          this._setInputMode("touch");
-        } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
-          this._setInputMode("mouse");
-        }
-
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-        pressDirection(btn, ev.pointerId);
-        if (
-          typeof btn.setPointerCapture === "function" &&
-          ev.pointerId !== null
-        ) {
-          try {
-            btn.setPointerCapture(ev.pointerId);
-          } catch (_e) {
-            /* ignore */
-          }
-        }
-      });
-
-      const release = (ev) => {
-        if (releaseByPointer(ev)) return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
-        clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
-      };
-      this.shadowRoot.addEventListener("pointerup", release);
-      this.shadowRoot.addEventListener("pointercancel", release);
-
-      this.shadowRoot.addEventListener("pointerleave", (ev) => {
-        if (releaseByPointer(ev)) return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
-        clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
-      });
-
-      this.shadowRoot.addEventListener("keydown", (ev) => {
-        if (ev.key !== "Enter" && ev.key !== " ") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-        ev.preventDefault();
-        pressDirection(btn, null);
-      });
-
-      this.shadowRoot.addEventListener("keyup", (ev) => {
-        if (ev.key !== "Enter" && ev.key !== " ") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
-        clearPressed(btn);
-        this._dispatch(EVT_RELEASE, { action });
-      });
-
-      this.shadowRoot.addEventListener("click", (ev) => {
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
-          return;
-        }
-        this._activeMic = !this._activeMic;
-        this._applyMicState();
-        this._dispatch(EVT_TOGGLE, {
-          action: CIRCLE_PAD_ACTIONS.MIC,
-          active: this._activeMic,
-        });
-      });
     }
 
     _applyMicState() {
