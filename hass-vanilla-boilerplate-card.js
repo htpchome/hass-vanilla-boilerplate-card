@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.53";
+  const CARD_VERSION = "0.1.54";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2128,8 +2128,9 @@
 `;
 
   class CirclePadControl extends HTMLElement {
-    #pressed = new Set();
-    #pressedByPointer = new Map();
+    #activeDirectionBtn = null;
+    #activeDirectionAction = null;
+    #activePointerId = null;
     #activeMic = false;
     #mounted = false;
     #eventsAbort = null;
@@ -2149,8 +2150,9 @@
     }
 
     disconnectedCallback() {
-      this.#pressed.clear();
-      this.#pressedByPointer.clear();
+      this.#activeDirectionBtn = null;
+      this.#activeDirectionAction = null;
+      this.#activePointerId = null;
       if (this.#eventsAbort) {
         this.#eventsAbort.abort();
         this.#eventsAbort = null;
@@ -2213,51 +2215,64 @@
           ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
           : null;
 
+      const getChevron = (btn) => btn?.querySelector(".slice-chevron") ?? null;
+
+      const setPressedVisual = (btn, pressed) => {
+        if (!btn) return;
+        btn.classList.toggle("is-pressed", pressed);
+        getChevron(btn)?.classList.toggle("is-pressed", pressed);
+      };
+
+      const setHoveredVisual = (btn, hovered) => {
+        if (!btn) return;
+        btn.classList.toggle("is-hovered", hovered);
+        getChevron(btn)?.classList.toggle("is-hovered", hovered);
+      };
+
       const clearPressed = (btn) => {
         if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        btn.classList.remove("is-pressed");
-        btn.querySelector(".slice-chevron")?.classList.remove("is-pressed");
-        if (!this.#pressed.has(action)) return false;
-        this.#pressed.delete(action);
+        const isActive = btn === this.#activeDirectionBtn;
+        setPressedVisual(btn, false);
+        if (!isActive) return false;
+        this.#activeDirectionBtn = null;
+        this.#activeDirectionAction = null;
+        this.#activePointerId = null;
         return true;
       };
 
       const clearHovered = (btn) => {
         if (!btn) return;
-        btn.classList.remove("is-hovered");
-        btn.querySelector(".slice-chevron")?.classList.remove("is-hovered");
+        setHoveredVisual(btn, false);
       };
 
       const clearAllPressed = (emitRelease = true) => {
-        const pressedActions = [...this.#pressed];
-        if (this.shadowRoot) {
+        const action = this.#activeDirectionAction;
+        const btn = this.#activeDirectionBtn;
+        if (!btn && !action) {
+          if (!this.shadowRoot) return;
           this.shadowRoot
             .querySelectorAll(".slice-button.is-pressed")
-            .forEach((el) => {
-              el.classList.remove("is-pressed");
-              el.querySelector(".slice-chevron")?.classList.remove("is-pressed");
-            });
+            .forEach((el) => setPressedVisual(el, false));
+          return;
         }
 
-        if (!this.#pressed.size && !pressedActions.length) return;
-        this.#pressed.clear();
-        this.#pressedByPointer.clear();
+        if (btn) {
+          setPressedVisual(btn, false);
+        }
+        this.#activeDirectionBtn = null;
+        this.#activeDirectionAction = null;
+        this.#activePointerId = null;
 
-        if (!emitRelease) return;
-        pressedActions.forEach((action) => {
+        if (emitRelease && action) {
           this._dispatch(EVT_RELEASE, { action });
-        });
+        }
       };
 
       const clearAllHovered = () => {
         if (!this.shadowRoot) return;
         this.shadowRoot
           .querySelectorAll(".slice-button.is-hovered")
-          .forEach((el) => {
-            el.classList.remove("is-hovered");
-            el.querySelector(".slice-chevron")?.classList.remove("is-hovered");
-          });
+          .forEach((el) => setHoveredVisual(el, false));
       };
 
       const syncHoveredFromPoint = (ev) => {
@@ -2281,8 +2296,7 @@
 
         const hoveredAction = hoveredBtn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(hoveredAction)) return;
-        hoveredBtn.classList.add("is-hovered");
-        hoveredBtn.querySelector(".slice-chevron")?.classList.add("is-hovered");
+        setHoveredVisual(hoveredBtn, true);
       };
 
       const syncHoveredFromLastPointer = () => {
@@ -2307,12 +2321,13 @@
         if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
           return false;
         }
-        const state = this.#pressedByPointer.get(ev.pointerId);
-        if (!state) return false;
-        this.#pressedByPointer.delete(ev.pointerId);
-        const released = clearPressed(state.btn);
+        if (ev.pointerId !== this.#activePointerId || !this.#activeDirectionBtn) {
+          return false;
+        }
+        const action = this.#activeDirectionAction;
+        const released = clearPressed(this.#activeDirectionBtn);
         if (released) {
-          this._dispatch(EVT_RELEASE, { action: state.action });
+          this._dispatch(EVT_RELEASE, { action });
         }
         syncHoveredFromPoint(ev);
         return true;
@@ -2321,13 +2336,16 @@
       const pressDirection = (btn, pointerId) => {
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(action)) return;
-        if (this.#pressed.has(action)) return;
-        this.#pressed.add(action);
-        if (pointerId !== null && pointerId !== undefined) {
-          this.#pressedByPointer.set(pointerId, { action, btn });
+        if (btn === this.#activeDirectionBtn && action === this.#activeDirectionAction) {
+          this.#activePointerId = pointerId ?? null;
+          return;
         }
-        btn.classList.add("is-pressed");
-        btn.querySelector(".slice-chevron")?.classList.add("is-pressed");
+
+        clearAllPressed(true);
+        this.#activeDirectionBtn = btn;
+        this.#activeDirectionAction = action;
+        this.#activePointerId = pointerId ?? null;
+        setPressedVisual(btn, true);
         this._dispatch(EVT_PRESS, { action });
       };
 
@@ -2340,7 +2358,11 @@
             clearAllHovered();
           } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
             this._setInputMode("mouse");
-            if (this.#pressed.size && !this.#pressedByPointer.has(ev.pointerId)) {
+            if (
+              this.#activeDirectionBtn &&
+              this.#activePointerId !== null &&
+              this.#activePointerId !== ev.pointerId
+            ) {
               clearAllPressed(true);
             }
           }
@@ -2371,7 +2393,7 @@
           rememberPointerState(ev);
           if (ev.buttons !== 0) return;
 
-          if (this.#pressed.size) {
+          if (this.#activeDirectionBtn) {
             // Safety net: if a release event was missed, recover immediately.
             clearAllPressed(true);
           }
