@@ -116,7 +116,7 @@ const CIRCLE_PAD_STYLES = `
 /* Center Hub Base + Hover */
 .center-button #path9 { fill: #bababa; }
 .center-button #circle9 { fill: url(#dome-gradient);   }
-.center-button:hover #circle9 { fill: url(#dome-gradient-green);  }
+.center-button:hover #circle9 { filter: url(#button-shadow-hover);  }
 .center-button:hover #path9 { fill: var(--circle-pad-success); }
 .center-button:focus #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
@@ -178,9 +178,6 @@ const CIRCLE_PAD_STYLES = `
 .center-button:focus,
 .center-button:active {
   filter: url(#green-glow-matrix);
-}
-.center-button:hover #circle9 { 
-
 }
 
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
@@ -264,7 +261,10 @@ const CIRCLE_PAD_SVG = `
         <filter id="button-shadow" x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
         </filter>
-
+        <!--  Outer shadow on the center button -->
+         <filter id="button-shadow-hover" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="var(--circle-pad-success)" flood-opacity="0.25"/>
+        </filter>  
         <filter id="outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
         </filter>
