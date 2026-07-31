@@ -1965,7 +1965,7 @@
     transition: stroke ${releaseMs}ms ease-out;
   }
 
-  
+  .slice-chevron.is-pressed,
   .slice-chevron.is-hovered {
     stroke: #ffffff !important;
   }
