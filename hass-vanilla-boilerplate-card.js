@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.48";
+  const CARD_VERSION = "0.1.49";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2234,6 +2234,27 @@
           .forEach((el) => el.classList.remove("is-hovered"));
       };
 
+      const syncHoveredFromPoint = (ev) => {
+        if (!ev) {
+          clearAllHovered();
+          return;
+        }
+        if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
+        if (!this.shadowRoot || typeof this.shadowRoot.elementFromPoint !== "function") {
+          clearAllHovered();
+          return;
+        }
+
+        const hit = this.shadowRoot.elementFromPoint(ev.clientX, ev.clientY);
+        const hoveredBtn = findBtn(hit);
+        clearAllHovered();
+        if (!hoveredBtn) return;
+
+        const hoveredAction = hoveredBtn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (!DIRECTION_ACTIONS.has(hoveredAction)) return;
+        hoveredBtn.classList.add("is-hovered");
+      };
+
       const releaseByPointer = (ev) => {
         if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
           return false;
@@ -2243,6 +2264,7 @@
         this.#pressedByPointer.delete(ev.pointerId);
         clearPressed(state.btn);
         this._dispatch(EVT_RELEASE, { action: state.action });
+        syncHoveredFromPoint(ev);
         return true;
       };
 
@@ -2320,9 +2342,17 @@
         if (!this.#pressed.has(action)) return;
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
+        syncHoveredFromPoint(ev);
       };
       this.shadowRoot.addEventListener("pointerup", release, listenerOpts);
       this.shadowRoot.addEventListener("pointercancel", release, listenerOpts);
+      this.shadowRoot.addEventListener(
+        "lostpointercapture",
+        (ev) => {
+          syncHoveredFromPoint(ev);
+        },
+        listenerOpts,
+      );
       this.shadowRoot.addEventListener(
         "pointerleave",
         () => {
