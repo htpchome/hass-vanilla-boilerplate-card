@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.79";
+  const CARD_VERSION = "0.1.80";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1762,6 +1762,16 @@
   const EVT_PRESS = "circle-pad-press";
   const EVT_RELEASE = "circle-pad-release";
   const EVT_TOGGLE = "circle-pad-toggle";
+  const INPUT_MODE_TOUCH = "touch";
+  const INPUT_MODE_MOUSE = "mouse";
+
+  const ROOT_EVENT_BINDINGS = Object.freeze([
+    ["pointerdown", "_onPointerDown"],
+    ["pointerup", "_onPointerUp"],
+    ["pointercancel", "_onPointerCancel"],
+    ["pointerleave", "_onPointerLeave"],
+    ["click", "_onClick"],
+  ]);
 
   const CIRCLE_PAD_STYLES = `
   :host {
@@ -2121,26 +2131,11 @@
     disconnectedCallback() {
       this._pressed.clear();
       if (this._wired && this.shadowRoot) {
-        if (this._onPointerDown) {
-          this.shadowRoot.removeEventListener("pointerdown", this._onPointerDown);
-        }
-        if (this._onPointerUp) {
-          this.shadowRoot.removeEventListener("pointerup", this._onPointerUp);
-        }
-        if (this._onPointerCancel) {
-          this.shadowRoot.removeEventListener(
-            "pointercancel",
-            this._onPointerCancel,
-          );
-        }
-        if (this._onPointerLeave) {
-          this.shadowRoot.removeEventListener(
-            "pointerleave",
-            this._onPointerLeave,
-          );
-        }
-        if (this._onClick) {
-          this.shadowRoot.removeEventListener("click", this._onClick);
+        for (const [eventName, handlerKey] of ROOT_EVENT_BINDINGS) {
+          const handler = this[handlerKey];
+          if (handler) {
+            this.shadowRoot.removeEventListener(eventName, handler);
+          }
         }
       }
       this._wired = false;
@@ -2191,14 +2186,23 @@
       this._rootEl.setAttribute("data-input-mode", mode);
     }
 
+    _trySetPointerCapture(btn, pointerId) {
+      if (!btn || typeof btn.setPointerCapture !== "function") return;
+      if (pointerId === null || pointerId === undefined) return;
+      try {
+        btn.setPointerCapture(pointerId);
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+
     _wireControlEvents() {
       if (this._wired || !this.shadowRoot) return;
       this._wired = true;
+      const actionSelector = "[" + CIRCLE_PAD_DATA_ACTION + "]";
 
       const findBtn = (target) =>
-        target instanceof Element
-          ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
-          : null;
+        target instanceof Element ? target.closest(actionSelector) : null;
 
       const clearPressed = (btn) => {
         if (!btn) return;
@@ -2229,22 +2233,14 @@
         const btn = findBtn(ev.target);
         if (!btn) return;
 
-        this._setInputMode(ev.pointerType === "touch" ? "touch" : "mouse");
+        this._setInputMode(
+          ev.pointerType === INPUT_MODE_TOUCH ? INPUT_MODE_TOUCH : INPUT_MODE_MOUSE,
+        );
 
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (action === CIRCLE_PAD_ACTIONS.MIC) {
           setMicPressed(btn, true);
-          if (
-            typeof btn.setPointerCapture === "function" &&
-            ev.pointerId !== null &&
-            ev.pointerId !== undefined
-          ) {
-            try {
-              btn.setPointerCapture(ev.pointerId);
-            } catch (_e) {
-              /* ignore */
-            }
-          }
+          this._trySetPointerCapture(btn, ev.pointerId);
           return;
         }
         if (!DIRECTION_ACTIONS.has(action)) return;
@@ -2257,17 +2253,7 @@
         btn.classList.add("is-pressed");
         this._dispatch(EVT_PRESS, { action });
 
-        if (
-          typeof btn.setPointerCapture === "function" &&
-          ev.pointerId !== null &&
-          ev.pointerId !== undefined
-        ) {
-          try {
-            btn.setPointerCapture(ev.pointerId);
-          } catch (_e) {
-            /* ignore */
-          }
-        }
+        this._trySetPointerCapture(btn, ev.pointerId);
       };
 
       const release = (ev) => {
@@ -2320,7 +2306,7 @@
         const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
         if (
           this._rootEl &&
-          this._rootEl.getAttribute("data-input-mode") === "touch" &&
+          this._rootEl.getAttribute("data-input-mode") === INPUT_MODE_TOUCH &&
           activeEl &&
           typeof activeEl.blur === "function"
         ) {
