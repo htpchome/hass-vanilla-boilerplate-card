@@ -118,7 +118,7 @@ const CIRCLE_PAD_STYLES = `
   }
 
   @media (hover: hover) {
-    :host(:not([data-input-mode="touch"])) .slice-button:hover path {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
       fill: var(--circle-pad-primary);
     }
   }
@@ -146,24 +146,24 @@ const CIRCLE_PAD_STYLES = `
   /* Touch safety override: some mobile browsers leave pseudo
      hover/active artifacts. Force base visuals unless JS marks
      the slice as actively pressed. */
-  :host([data-input-mode="touch"]) .slice-button path {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button path {
     fill: var(--circle-pad-bg-1) !important;
   }
 
-  :host([data-input-mode="touch"]) .slice-button .slice-chevron {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
     stroke: #555555 !important;
   }
 
-  :host([data-input-mode="touch"]) .slice-button.is-pressed path {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary) !important;
   }
 
-  :host([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
   }
 
   @media (hover: hover) {
-    :host(:not([data-input-mode="touch"])) .slice-button:hover .slice-chevron {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
       stroke: #ffffff !important;
     }
   }
@@ -197,7 +197,7 @@ const CIRCLE_PAD_STYLES = `
   /* Hover-only accent ring on desktop/trackpad without changing
      the mic's fill state. Toggle state remains class-driven. */
   @media (hover: hover) {
-    :host(:not([data-input-mode="touch"])) .center-button:hover {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover {
       filter: url(#green-glow-matrix);
     }
   }
@@ -379,6 +379,7 @@ class CirclePadControl extends HTMLElement {
     const root = document.createElement("div");
     root.className = CIRCLE_PAD_CLASS;
     root.innerHTML = CIRCLE_PAD_SVG;
+    this._rootEl = root;
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
@@ -428,9 +429,9 @@ class CirclePadControl extends HTMLElement {
 
     this.shadowRoot.addEventListener("pointerdown", (ev) => {
       if (ev.pointerType === "touch") {
-        this.setAttribute("data-input-mode", "touch");
+        this._setInputMode("touch");
       } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
-        this.setAttribute("data-input-mode", "mouse");
+        this._setInputMode("mouse");
       }
 
       const btn = findBtn(ev.target);
@@ -514,6 +515,11 @@ class CirclePadControl extends HTMLElement {
     if (!mic) return;
     mic.classList.toggle("is-active", this._activeMic);
     mic.setAttribute("aria-pressed", String(this._activeMic));
+  }
+
+  _setInputMode(mode) {
+    if (!this._rootEl) return;
+    this._rootEl.setAttribute("data-input-mode", mode);
   }
 
   _dispatch(type, detail) {
