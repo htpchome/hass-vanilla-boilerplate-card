@@ -62,6 +62,54 @@
  *    //   this._setMicEnabled(e.detail.active);
  *    // });
  *
+ * 6) Optional: hardware gamepad/joystick adapter
+ *    - This component does not read Gamepad API directly.
+ *    - To support USB/Bluetooth PTZ controllers, map gamepad axes/buttons
+ *      to the same actions and event names used by this control.
+ *
+ *    const pad = document.getElementById("pad");
+ *    let prevDirection = null;
+ *
+ *    const axisToDirection = (x, y, deadzone = 0.35) => {
+ *      if (Math.abs(x) < deadzone && Math.abs(y) < deadzone) return null;
+ *      const angle = Math.atan2(y, x) * (180 / Math.PI);
+ *      if (angle >= -22.5 && angle < 22.5) return "right";
+ *      if (angle >= 22.5 && angle < 67.5) return "down-right";
+ *      if (angle >= 67.5 && angle < 112.5) return "down";
+ *      if (angle >= 112.5 && angle < 157.5) return "down-left";
+ *      if (angle >= 157.5 || angle < -157.5) return "left";
+ *      if (angle >= -157.5 && angle < -112.5) return "up-left";
+ *      if (angle >= -112.5 && angle < -67.5) return "up";
+ *      return "up-right";
+ *    };
+ *
+ *    const emitPad = (type, detail) => {
+ *      pad.dispatchEvent(new CustomEvent(type, {
+ *        detail,
+ *        bubbles: true,
+ *        composed: true,
+ *      }));
+ *    };
+ *
+ *    const pollGamepad = () => {
+ *      const gp = navigator.getGamepads?.()[0];
+ *      if (gp) {
+ *        const dir = axisToDirection(gp.axes[0] || 0, gp.axes[1] || 0);
+ *        if (dir !== prevDirection) {
+ *          if (prevDirection) emitPad("circle-pad-release", { action: prevDirection });
+ *          if (dir) emitPad("circle-pad-press", { action: dir });
+ *          prevDirection = dir;
+ *        }
+ *
+ *        // Example: first button toggles mic.
+ *        if (gp.buttons[0]?.pressed) {
+ *          emitPad("circle-pad-toggle", { action: "mic", active: true });
+ *        }
+ *      }
+ *      requestAnimationFrame(pollGamepad);
+ *    };
+ *    requestAnimationFrame(pollGamepad);
+ *
  * This module adapts the control surface from circle-pad.html
  * (wheel-responsive-wrapper + svg), ignoring that file's external
  * parent panel wrapper.
