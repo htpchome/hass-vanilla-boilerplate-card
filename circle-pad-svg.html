@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Circle Pad Control - Standalone Demo</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+
+      --page-bg: #f5f5f7;
+      --page-fg: #1a1a1a;
+      --panel-bg: #ffffff;
+      --panel-border: #d8d8dc;
+      --muted: #6b6b70;
+      --accent: #03a9f4;
+      --success: #2e7d32;
+      --log-bg: #1a1a1a;
+      --log-fg: #e6e6e6;
+
+      --primary-background-color: #fafafa;
+      --secondary-background-color: #e5e5e5;
+      --card-background-color: #ffffff;
+      --dark-primary-color: #0288d1;
+      --primary-color: #009ac7;
+      --light-primary-color: #b3e5fc;
+      --accent-color: #ff9800;
+      --primary-text-color: #141414;
+      --secondary-text-color: #5e5e5e;
+      --disabled-text-color: #bdbdbd;
+      --state-inactive-color: #9e9e9e;
+      --text-primary-color: #ffffff;
+      --divider-color: rgba(0, 0, 0, 0.12);
+      --success-color: #43a047;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page-bg: #161618;
+        --page-fg: #e6e6e8;
+        --panel-bg: #1f1f22;
+        --panel-border: #2c2c30;
+        --muted: #9a9a9e;
+        --log-bg: #0e0e10;
+        --log-fg: #d6d6d8;
+        --primary-background-color: #141416;
+        --secondary-background-color: #1f1f22;
+        --card-background-color: #1a1a1d;
+        --dark-primary-color: #4ea3ff;
+        --primary-color: #1fb4dd;
+        --light-primary-color: #8fd8ff;
+        --accent-color: #ffb74d;
+        --primary-text-color: #f1f1f3;
+        --secondary-text-color: #a8a8ac;
+        --disabled-text-color: #4a4a4e;
+        --state-inactive-color: #7c7c80;
+        --text-primary-color: #ffffff;
+        --divider-color: #2c2c30;
+        --success-color: #66bb6a;
+      }
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--page-bg);
+      color: var(--page-fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 4px;
+      font-weight: 650;
+    }
+
+    .lede {
+      color: var(--muted);
+      margin: 0 0 24px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 0;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      font-weight: 650;
+      margin: 0 0 4px;
+    }
+
+    .panel .desc {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin: 0 0 16px;
+    }
+
+    .stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0 20px;
+      min-height: 220px;
+    }
+
+    circle-pad-control {
+      display: block;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    .demo-control--240 {
+      width: 240px;
+      height: 240px;
+    }
+
+    .demo-control--500 {
+      width: 500px;
+      height: 500px;
+    }
+
+    .row-tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 12px;
+      flex-wrap: wrap;
+    }
+
+    button.tool {
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border: 1px solid var(--panel-border);
+      background: transparent;
+      color: inherit;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button.tool:hover {
+      border-color: var(--accent);
+    }
+
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      background: var(--log-bg);
+      color: var(--log-fg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-height: 120px;
+      max-height: 220px;
+      overflow-y: auto;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log .line {
+      display: block;
+      padding: 1px 0;
+    }
+
+    .log .ts {
+      color: #888;
+    }
+
+    .log .ev-press {
+      color: #82b1ff;
+    }
+
+    .log .ev-release {
+      color: #c5e478;
+    }
+
+    .log .ev-toggle {
+      color: #ffb74d;
+    }
+
+    .log .ev-empty {
+      color: #888;
+      font-style: italic;
+    }
+
+    .swatch-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(127, 127, 127, 0.15);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+  </style>
+  <script src="./hass-vanilla-boilerplate-card.js"></script>
+</head>
+
+<body>
+  <main>
+    <h1>Circle Pad Control</h1>
+    <p class="lede">Standalone demo page for the current circle-pad implementation. The controls below use the same
+      component code as the card and are shown at <code>240px</code> and <code>500px</code>.</p>
+
+    <section class="demo-grid">
+      <article class="panel" data-circle-demo>
+        <h2>240px Demo</h2>
+        <p class="desc">Compact version for dense layouts.</p>
+        <div class="stage">
+          <circle-pad-control class="demo-control--240" aria-label="Circle pad 240px demo"></circle-pad-control>
+        </div>
+        <div class="row-tools">
+          <div class="swatch-row">
+            <span>Size: <code>240px</code></span>
+          </div>
+          <button class="tool" type="button" data-clear-log>Clear log</button>
+        </div>
+        <pre class="log" aria-live="polite"
+          aria-label="240px demo event log"><span class="ev-empty">Waiting for input...</span></pre>
+      </article>
+
+      <article class="panel" data-circle-demo>
+        <h2>500px Demo</h2>
+        <p class="desc">Large version for closer SVG and interaction inspection.</p>
+        <div class="stage">
+          <circle-pad-control class="demo-control--500" aria-label="Circle pad 500px demo"></circle-pad-control>
+        </div>
+        <div class="row-tools">
+          <div class="swatch-row">
+            <span>Size: <code>500px</code></span>
+          </div>
+          <button class="tool" type="button" data-clear-log>Clear log</button>
+        </div>
+        <pre class="log" aria-live="polite"
+          aria-label="500px demo event log"><span class="ev-empty">Waiting for input...</span></pre>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const formatTimestamp = () => {
+      const now = new Date();
+      return now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    };
+
+    const escapeHtml = (value) =>
+      String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const renderLog = (logEl, lines) => {
+      if (!lines.length) {
+        logEl.innerHTML = '<span class="ev-empty">Waiting for input...</span>';
+        return;
+      }
+
+      logEl.innerHTML = lines
+        .map(
+          (line) =>
+            '<span class="line">' +
+            '<span class="ts">[' + formatTimestamp() + ']</span> ' +
+            line +
+            '</span>',
+        )
+        .join("");
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    const formatPress = (action) =>
+      '<span class="ev-press">[press]</span> ' + escapeHtml(action);
+    const formatRelease = (action) =>
+      '<span class="ev-release">[release]</span> ' + escapeHtml(action);
+    const formatToggle = (active) =>
+      '<span class="ev-toggle">[toggle]</span> mic:' + (active ? 'on' : 'off');
+
+    document.querySelectorAll('[data-circle-demo]').forEach((panel) => {
+      const control = panel.querySelector('circle-pad-control');
+      const logEl = panel.querySelector('.log');
+      const clearButton = panel.querySelector('[data-clear-log]');
+      const lines = [];
+
+      const push = (html) => {
+        lines.push(html);
+        renderLog(logEl, lines);
+      };
+
+      control.addEventListener('circle-pad-press', (ev) => {
+        push(formatPress(ev.detail && ev.detail.action));
+      });
+
+      control.addEventListener('circle-pad-release', (ev) => {
+        push(formatRelease(ev.detail && ev.detail.action));
+      });
+
+      control.addEventListener('circle-pad-toggle', (ev) => {
+        push(formatToggle(Boolean(ev.detail && ev.detail.active)));
+      });
+
+      clearButton.addEventListener('click', () => {
+        lines.length = 0;
+        renderLog(logEl, lines);
+      });
+
+      renderLog(logEl, lines);
+    });
+  </script>
+</body>
+
+</html>
