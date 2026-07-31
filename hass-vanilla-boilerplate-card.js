@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.55";
+  const CARD_VERSION = "0.1.56";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2253,6 +2253,9 @@
           this.shadowRoot
             .querySelectorAll(".slice-button.is-pressed")
             .forEach((el) => setPressedVisual(el, false));
+          this.shadowRoot
+            .querySelectorAll(".slice-chevron.is-pressed")
+            .forEach((el) => el.classList.remove("is-pressed"));
           return;
         }
 
@@ -2273,6 +2276,9 @@
         this.shadowRoot
           .querySelectorAll(".slice-button.is-hovered")
           .forEach((el) => setHoveredVisual(el, false));
+        this.shadowRoot
+          .querySelectorAll(".slice-chevron.is-hovered")
+          .forEach((el) => el.classList.remove("is-hovered"));
       };
 
       const syncHoveredFromPoint = (ev) => {
@@ -2414,8 +2420,7 @@
           if (!btn) return;
           const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
           if (!DIRECTION_ACTIONS.has(action)) return;
-          btn.classList.add("is-hovered");
-          btn.querySelector(".slice-chevron")?.classList.add("is-hovered");
+          setHoveredVisual(btn, true);
         },
         listenerOpts,
       );

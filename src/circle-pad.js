@@ -538,6 +538,9 @@ class CirclePadControl extends HTMLElement {
         this.shadowRoot
           .querySelectorAll(".slice-button.is-pressed")
           .forEach((el) => setPressedVisual(el, false));
+        this.shadowRoot
+          .querySelectorAll(".slice-chevron.is-pressed")
+          .forEach((el) => el.classList.remove("is-pressed"));
         return;
       }
 
@@ -558,6 +561,9 @@ class CirclePadControl extends HTMLElement {
       this.shadowRoot
         .querySelectorAll(".slice-button.is-hovered")
         .forEach((el) => setHoveredVisual(el, false));
+      this.shadowRoot
+        .querySelectorAll(".slice-chevron.is-hovered")
+        .forEach((el) => el.classList.remove("is-hovered"));
     };
 
     const syncHoveredFromPoint = (ev) => {
@@ -699,8 +705,7 @@ class CirclePadControl extends HTMLElement {
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(action)) return;
-        btn.classList.add("is-hovered");
-        btn.querySelector(".slice-chevron")?.classList.add("is-hovered");
+        setHoveredVisual(btn, true);
       },
       listenerOpts,
     );
