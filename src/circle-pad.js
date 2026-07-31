@@ -44,6 +44,7 @@ const DIRECTION_ACTIONS = Object.freeze(
   ]),
 );
 
+const EVT_TOGGLE = "circle-pad-toggle";
 
 const CIRCLE_PAD_STYLES = `
   :host {
@@ -321,14 +322,21 @@ class CirclePadControl extends HTMLElement {
     this._activeMic = false;
     this._mounted = false;
     this._wired = false;
+    this._onClick = null;
   }
 
   connectedCallback() {
     this._mount();
+    this._wireMicEvents();
   }
 
   disconnectedCallback() {
     this._pressed.clear();
+    if (this._wired && this.shadowRoot && this._onClick) {
+      this.shadowRoot.removeEventListener("click", this._onClick);
+    }
+    this._wired = false;
+    this._onClick = null;
   }
 
   setActive(action, active) {
@@ -371,6 +379,30 @@ class CirclePadControl extends HTMLElement {
     this._rootEl.setAttribute("data-input-mode", mode);
   }
 
+  _wireMicEvents() {
+    if (this._wired || !this.shadowRoot) return;
+    this._wired = true;
+
+    this._onClick = (ev) => {
+      const target = ev.target;
+      if (!(target instanceof Element)) return;
+      const btn = target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
+      if (!btn) return;
+      if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
+        return;
+      }
+
+      this._activeMic = !this._activeMic;
+      this._applyMicState();
+      this._dispatch(EVT_TOGGLE, {
+        action: CIRCLE_PAD_ACTIONS.MIC,
+        active: this._activeMic,
+      });
+    };
+
+    this.shadowRoot.addEventListener("click", this._onClick);
+  }
+
   _dispatch(type, detail) {
     this.dispatchEvent(
       new CustomEvent(type, {
@@ -389,8 +421,4 @@ if (
   customElements.define("circle-pad-control", CirclePadControl);
 }
 
-export {
-  CirclePadControl,
-  CIRCLE_PAD_ACTIONS
-
-};
+export { CirclePadControl, CIRCLE_PAD_ACTIONS, EVT_TOGGLE };

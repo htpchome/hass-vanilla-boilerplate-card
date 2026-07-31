@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.69";
+  const CARD_VERSION = "0.1.71";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -588,7 +588,7 @@
   // Custom events dispatched on the host element.
   const EVT_PRESS$1 = "dpad-press";
   const EVT_RELEASE$1 = "dpad-release";
-  const EVT_TOGGLE$1 = "dpad-toggle";
+  const EVT_TOGGLE$2 = "dpad-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -1035,7 +1035,7 @@
         if (btn.getAttribute(DPAD_DATA_ACTION) !== DPAD_ACTIONS.MIC) return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE$1, {
+        this._dispatch(EVT_TOGGLE$2, {
           action: DPAD_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1144,7 +1144,7 @@
   // and a <dpad-8way-control> without event name collisions.
   const EVT_PRESS = "dpad-8way-press";
   const EVT_RELEASE = "dpad-8way-release";
-  const EVT_TOGGLE = "dpad-8way-toggle";
+  const EVT_TOGGLE$1 = "dpad-8way-toggle";
 
   // Local icon map keeps this module self-contained so it can be
   // copied into any HA card without importing project files.
@@ -1669,7 +1669,7 @@
           return;
         this._activeMic = !this._activeMic;
         this._applyMicState();
-        this._dispatch(EVT_TOGGLE, {
+        this._dispatch(EVT_TOGGLE$1, {
           action: DPAD_8WAY_ACTIONS.MIC,
           active: this._activeMic,
         });
@@ -1758,6 +1758,8 @@
       CIRCLE_PAD_ACTIONS.UP_LEFT,
     ]),
   );
+
+  const EVT_TOGGLE = "circle-pad-toggle";
 
 
   const CIRCLE_PAD_STYLES = `
@@ -2036,14 +2038,21 @@
       this._activeMic = false;
       this._mounted = false;
       this._wired = false;
+      this._onClick = null;
     }
 
     connectedCallback() {
       this._mount();
+      this._wireMicEvents();
     }
 
     disconnectedCallback() {
       this._pressed.clear();
+      if (this._wired && this.shadowRoot && this._onClick) {
+        this.shadowRoot.removeEventListener("click", this._onClick);
+      }
+      this._wired = false;
+      this._onClick = null;
     }
 
     setActive(action, active) {
@@ -2084,6 +2093,30 @@
     _setInputMode(mode) {
       if (!this._rootEl) return;
       this._rootEl.setAttribute("data-input-mode", mode);
+    }
+
+    _wireMicEvents() {
+      if (this._wired || !this.shadowRoot) return;
+      this._wired = true;
+
+      this._onClick = (ev) => {
+        const target = ev.target;
+        if (!(target instanceof Element)) return;
+        const btn = target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
+        if (!btn) return;
+        if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
+          return;
+        }
+
+        this._activeMic = !this._activeMic;
+        this._applyMicState();
+        this._dispatch(EVT_TOGGLE, {
+          action: CIRCLE_PAD_ACTIONS.MIC,
+          active: this._activeMic,
+        });
+      };
+
+      this.shadowRoot.addEventListener("click", this._onClick);
     }
 
     _dispatch(type, detail) {
