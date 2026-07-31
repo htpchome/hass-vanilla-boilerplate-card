@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.58";
+  const CARD_VERSION = "0.1.60";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1937,7 +1937,7 @@
 
   .wheel-button path,
   .wheel-button circle {
-    transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+    transition: fill 0.2s ease, filter 0.2s ease;
   }
 
   .slice-button path {
@@ -2194,31 +2194,14 @@
           ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
           : null;
 
-      const getChevron = (btn) => btn?.querySelector(".slice-chevron") ?? null;
-
       const setPressedVisual = (btn, pressed) => {
         if (!btn) return;
         btn.classList.toggle("is-pressed", pressed);
-        const chevron = getChevron(btn);
-        if (chevron) {
-          chevron.style.stroke = pressed ? "#ffffff" : "#555555";
-          const duration = pressed
-            ? this.#options.pressInMs
-            : this.#options.releaseMs;
-          chevron.style.transition = `stroke ${duration}ms ${
-          pressed ? "ease-in" : "ease-out"
-        }`;
-        }
       };
 
       const setHoveredVisual = (btn, hovered) => {
         if (!btn) return;
         btn.classList.toggle("is-hovered", hovered);
-        const chevron = getChevron(btn);
-        if (chevron && !btn.classList.contains("is-pressed")) {
-          chevron.style.stroke = hovered ? "#ffffff" : "#555555";
-          chevron.style.transition = `stroke ${this.#options.releaseMs}ms ease-out`;
-        }
       };
 
       const clearPressed = (btn) => {
