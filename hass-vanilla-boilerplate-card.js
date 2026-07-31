@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.81";
+  const CARD_VERSION = "0.1.82";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2116,11 +2116,7 @@
       this._activeMic = false;
       this._mounted = false;
       this._wired = false;
-      this._onPointerDown = null;
-      this._onPointerUp = null;
-      this._onPointerCancel = null;
-      this._onPointerLeave = null;
-      this._onClick = null;
+      this._resetRootHandlers();
     }
 
     connectedCallback() {
@@ -2130,20 +2126,9 @@
 
     disconnectedCallback() {
       this._pressed.clear();
-      if (this._wired && this.shadowRoot) {
-        for (const [eventName, handlerKey] of ROOT_EVENT_BINDINGS) {
-          const handler = this[handlerKey];
-          if (handler) {
-            this.shadowRoot.removeEventListener(eventName, handler);
-          }
-        }
-      }
+      this._unbindRootEvents();
       this._wired = false;
-      this._onPointerDown = null;
-      this._onPointerUp = null;
-      this._onPointerCancel = null;
-      this._onPointerLeave = null;
-      this._onClick = null;
+      this._resetRootHandlers();
     }
 
     setActive(action, active) {
@@ -2188,11 +2173,43 @@
 
     _trySetPointerCapture(btn, pointerId) {
       if (!btn || typeof btn.setPointerCapture !== "function") return;
-      if (pointerId === null || pointerId === undefined) return;
+      if (!this._hasPointerId(pointerId)) return;
       try {
         btn.setPointerCapture(pointerId);
       } catch (_e) {
         /* ignore */
+      }
+    }
+
+    _hasPointerId(pointerId) {
+      return pointerId !== null && pointerId !== undefined;
+    }
+
+    _resetRootHandlers() {
+      this._onPointerDown = null;
+      this._onPointerUp = null;
+      this._onPointerCancel = null;
+      this._onPointerLeave = null;
+      this._onClick = null;
+    }
+
+    _bindRootEvents() {
+      if (!this.shadowRoot) return;
+      for (const [eventName, handlerKey] of ROOT_EVENT_BINDINGS) {
+        const handler = this[handlerKey];
+        if (handler) {
+          this.shadowRoot.addEventListener(eventName, handler);
+        }
+      }
+    }
+
+    _unbindRootEvents() {
+      if (!this.shadowRoot) return;
+      for (const [eventName, handlerKey] of ROOT_EVENT_BINDINGS) {
+        const handler = this[handlerKey];
+        if (handler) {
+          this.shadowRoot.removeEventListener(eventName, handler);
+        }
       }
     }
 
@@ -2245,7 +2262,7 @@
       if (this._pressed.has(action)) return;
 
       this._pressed.add(action);
-      if (pointerId !== null && pointerId !== undefined) {
+      if (this._hasPointerId(pointerId)) {
         this._pressedByPointer.set(pointerId, { action, btn });
       }
       btn.classList.add("is-pressed");
@@ -2339,11 +2356,7 @@
         this._handleMicToggleClick(btn);
       };
 
-      this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
-      this.shadowRoot.addEventListener("pointerup", this._onPointerUp);
-      this.shadowRoot.addEventListener("pointercancel", this._onPointerCancel);
-      this.shadowRoot.addEventListener("pointerleave", this._onPointerLeave);
-      this.shadowRoot.addEventListener("click", this._onClick);
+      this._bindRootEvents();
     }
 
     _dispatch(type, detail) {
