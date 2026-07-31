@@ -126,7 +126,43 @@ const renderSliceButtons = () =>
       "</g>",
   ).join("");
 
-const buildCirclePadStyles = () => `
+const DEFAULT_OPTIONS = Object.freeze({
+  minHeight: 220,
+  pressInMs: 70,
+  releaseMs: 140,
+});
+
+const normalizeOptions = (nextOptions = {}, baseOptions = DEFAULT_OPTIONS) => {
+  const normalized = { ...baseOptions };
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextOptions, "minHeight") &&
+    Number.isFinite(nextOptions.minHeight) &&
+    nextOptions.minHeight > 0
+  ) {
+    normalized.minHeight = Math.round(nextOptions.minHeight);
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextOptions, "pressInMs") &&
+    Number.isFinite(nextOptions.pressInMs) &&
+    nextOptions.pressInMs >= 0
+  ) {
+    normalized.pressInMs = Math.round(nextOptions.pressInMs);
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextOptions, "releaseMs") &&
+    Number.isFinite(nextOptions.releaseMs) &&
+    nextOptions.releaseMs >= 0
+  ) {
+    normalized.releaseMs = Math.round(nextOptions.releaseMs);
+  }
+
+  return normalized;
+};
+
+const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
   :host {
     display: block;
     --circle-pad-bg-1: var(--primary-background-color);
@@ -153,7 +189,7 @@ const buildCirclePadStyles = () => `
     position: relative;
     overflow: visible;
     aspect-ratio: 1 / 1;
-    min-height: 220px;
+    min-height: ${minHeight}px;
   }
 
   .${CIRCLE_PAD_CLASS}__wrapper::before {
@@ -192,7 +228,7 @@ const buildCirclePadStyles = () => `
   .slice-button path {
     fill: var(--circle-pad-bg-1);
     /* Default (release) fade-out speed */
-    transition: fill 140ms ease-out;
+    transition: fill ${releaseMs}ms ease-out;
   }
 
   @media (hover: hover) {
@@ -204,20 +240,20 @@ const buildCirclePadStyles = () => `
   .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary);
     /* Faster press-in so taps feel immediate */
-    transition-duration: 70ms;
+    transition-duration: ${pressInMs}ms;
     transition-timing-function: ease-in;
   }
 
   .slice-chevron {
     stroke: #555555;
     /* Default (release) fade-out speed */
-    transition: stroke 140ms ease-out;
+    transition: stroke ${releaseMs}ms ease-out;
   }
 
   .slice-button.is-pressed .slice-chevron {
     stroke: #ffffff !important;
     /* Faster press-in so taps feel immediate */
-    transition-duration: 70ms;
+    transition-duration: ${pressInMs}ms;
     transition-timing-function: ease-in;
   }
 
@@ -379,14 +415,18 @@ const buildCirclePadSvg = () => `
 `;
 
 class CirclePadControl extends HTMLElement {
+  #pressed = new Set();
+  #pressedByPointer = new Map();
+  #activeMic = false;
+  #mounted = false;
+  #eventsAbort = null;
+  #rootEl = null;
+  #styleEl = null;
+  #options = { ...DEFAULT_OPTIONS };
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._pressed = new Set();
-    this._pressedByPointer = new Map();
-    this._activeMic = false;
-    this._mounted = false;
-    this._eventsAbort = null;
   }
 
   connectedCallback() {
@@ -395,35 +435,54 @@ class CirclePadControl extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this._pressed.clear();
-    this._pressedByPointer.clear();
-    if (this._eventsAbort) {
-      this._eventsAbort.abort();
-      this._eventsAbort = null;
+    this.#pressed.clear();
+    this.#pressedByPointer.clear();
+    if (this.#eventsAbort) {
+      this.#eventsAbort.abort();
+      this.#eventsAbort = null;
     }
+  }
+
+  setOptions(nextOptions = {}) {
+    const merged = normalizeOptions(nextOptions, this.#options);
+    const changed =
+      merged.minHeight !== this.#options.minHeight ||
+      merged.pressInMs !== this.#options.pressInMs ||
+      merged.releaseMs !== this.#options.releaseMs;
+
+    if (!changed) return;
+    this.#options = merged;
+    if (this.#styleEl) {
+      this.#styleEl.textContent = buildCirclePadStyles(this.#options);
+    }
+  }
+
+  getOptions() {
+    return { ...this.#options };
   }
 
   setActive(action, active) {
     if (action !== CIRCLE_PAD_ACTIONS.MIC) return;
-    this._activeMic = Boolean(active);
+    this.#activeMic = Boolean(active);
     this._applyMicState();
   }
 
   getState() {
-    return { mic: this._activeMic };
+    return { mic: this.#activeMic };
   }
 
   _mount() {
-    if (this._mounted) return;
-    this._mounted = true;
+    if (this.#mounted) return;
+    this.#mounted = true;
 
     const style = document.createElement("style");
-    style.textContent = buildCirclePadStyles();
+    style.textContent = buildCirclePadStyles(this.#options);
+    this.#styleEl = style;
 
     const root = document.createElement("div");
     root.className = CIRCLE_PAD_CLASS;
     root.innerHTML = buildCirclePadSvg();
-    this._rootEl = root;
+    this.#rootEl = root;
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
@@ -431,9 +490,9 @@ class CirclePadControl extends HTMLElement {
   }
 
   _wireEvents() {
-    if (this._eventsAbort || !this.shadowRoot) return;
-    this._eventsAbort = new AbortController();
-    const listenerOpts = { signal: this._eventsAbort.signal };
+    if (this.#eventsAbort || !this.shadowRoot) return;
+    this.#eventsAbort = new AbortController();
+    const listenerOpts = { signal: this.#eventsAbort.signal };
 
     const findBtn = (target) =>
       target instanceof Element
@@ -443,8 +502,8 @@ class CirclePadControl extends HTMLElement {
     const clearPressed = (btn) => {
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this._pressed.has(action)) return;
-      this._pressed.delete(action);
+      if (!this.#pressed.has(action)) return;
+      this.#pressed.delete(action);
       btn.classList.remove("is-pressed");
     };
 
@@ -452,9 +511,9 @@ class CirclePadControl extends HTMLElement {
       if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
         return false;
       }
-      const state = this._pressedByPointer.get(ev.pointerId);
+      const state = this.#pressedByPointer.get(ev.pointerId);
       if (!state) return false;
-      this._pressedByPointer.delete(ev.pointerId);
+      this.#pressedByPointer.delete(ev.pointerId);
       clearPressed(state.btn);
       this._dispatch(EVT_RELEASE, { action: state.action });
       return true;
@@ -463,10 +522,10 @@ class CirclePadControl extends HTMLElement {
     const pressDirection = (btn, pointerId) => {
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
       if (!DIRECTION_ACTIONS.has(action)) return;
-      if (this._pressed.has(action)) return;
-      this._pressed.add(action);
+      if (this.#pressed.has(action)) return;
+      this.#pressed.add(action);
       if (pointerId !== null && pointerId !== undefined) {
-        this._pressedByPointer.set(pointerId, { action, btn });
+        this.#pressedByPointer.set(pointerId, { action, btn });
       }
       btn.classList.add("is-pressed");
       this._dispatch(EVT_PRESS, { action });
@@ -505,7 +564,7 @@ class CirclePadControl extends HTMLElement {
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this._pressed.has(action)) return;
+      if (!this.#pressed.has(action)) return;
       clearPressed(btn);
       this._dispatch(EVT_RELEASE, { action });
     };
@@ -520,7 +579,7 @@ class CirclePadControl extends HTMLElement {
         if (!btn) return;
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
+        if (!this.#pressed.has(action)) return;
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
       },
@@ -548,7 +607,7 @@ class CirclePadControl extends HTMLElement {
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!this._pressed.has(action)) return;
+        if (!this.#pressed.has(action)) return;
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
       },
@@ -565,11 +624,11 @@ class CirclePadControl extends HTMLElement {
         ) {
           return;
         }
-        this._activeMic = !this._activeMic;
+        this.#activeMic = !this.#activeMic;
         this._applyMicState();
         this._dispatch(EVT_TOGGLE, {
           action: CIRCLE_PAD_ACTIONS.MIC,
-          active: this._activeMic,
+          active: this.#activeMic,
         });
       },
       listenerOpts,
@@ -580,13 +639,13 @@ class CirclePadControl extends HTMLElement {
     if (!this.shadowRoot) return;
     const mic = this.shadowRoot.querySelector(".center-button");
     if (!mic) return;
-    mic.classList.toggle("is-active", this._activeMic);
-    mic.setAttribute("aria-pressed", String(this._activeMic));
+    mic.classList.toggle("is-active", this.#activeMic);
+    mic.setAttribute("aria-pressed", String(this.#activeMic));
   }
 
   _setInputMode(mode) {
-    if (!this._rootEl) return;
-    this._rootEl.setAttribute("data-input-mode", mode);
+    if (!this.#rootEl) return;
+    this.#rootEl.setAttribute("data-input-mode", mode);
   }
 
   _dispatch(type, detail) {
