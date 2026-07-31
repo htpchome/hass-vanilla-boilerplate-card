@@ -108,97 +108,98 @@ const CIRCLE_PAD_STYLES = `
     transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   }
 
-  .slice-button path {
-    fill: var(--circle-pad-bg-1);
-    /* Default (release) fade-out speed */
-    transition: fill 140ms ease-out;
-  }
+.slice-button path { fill: var(--circle-pad-bg-1) }
+.slice-button:hover path { fill: var(--circle-pad-primary) }
+.slice-button:active path { fill: var(--circle-pad-dark-primary) }
 
-  @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
-      fill: var(--circle-pad-primary);
-    }
-  }
+/* Center Hub Base + Hover */
+.center-button #path9 { fill: #bababa; }
+.center-button #circle9 { fill: url(#dome-gradient);   }
+.center-button:hover #circle9 { fill: url(#dome-gradient-green);  }
+.center-button:hover #path9 { fill: var(--circle-pad-success); }
+.center-button:focus #path9 { fill: var(--circle-pad-success); }
+.center-button:active #path9 { fill: var(--circle-pad-success); }
 
-  .slice-button.is-pressed path {
-    fill: var(--circle-pad-dark-primary);
-    /* Faster press-in so taps feel immediate */
-    transition-duration: 70ms;
-    transition-timing-function: ease-in;
-  }
+.main-circle {filter: url(#outside-shadow);}
+.main-circle circle {
+  shape-rendering: geometricPrecision;
+}
 
-  .slice-chevron {
-    stroke: #555555;
-    /* Default (release) fade-out speed */
-    transition: stroke 140ms ease-out;
-  }
+/* Green Dome Focus State (Keyboard Navigation) */
+.center-button:focus #circle9,
+.center-button:focus-within #circle9 { 
+  fill: url(#dome-gradient-green); 
+  outline: none; /* Clears default browser ring if you are using your own filters */
+}
 
-  .slice-button.is-pressed .slice-chevron {
-    stroke: #ffffff !important;
-    /* Faster press-in so taps feel immediate */
-    transition-duration: 70ms;
-    transition-timing-function: ease-in;
-  }
+/* Green Dome Active State (Pressed Click) */
+.center-button:active #circle9 { 
+  /* Slightly darker green fallback or an explicit deeper gradient shift */
+  fill: url(#dome-gradient-green); 
+  filter: brightness(0.92) url(#button-shadow); /* Clean way to simulate a physical press */
+}
 
-  .center-button #path9 {
-    fill: #bababa;
-  }
+/* Standalone shadow layer applied exclusively over the center button structure in base state */
+.center-button {
+  box-shadow: 
+    0px 4px 8px rgba(0, 0, 0, 0.12),          /* Your original outer drop shadow */
+    inset 0px 2px 4px rgba(0, 0, 0, 0.15);    /* New subtle inset shadow */
+}
 
-  .center-button #circle9 {
-    fill: url(#dome-gradient);
-  }
+/* The inner shadow overlay styling */
+.inner-shadow-overlay {
+  fill: none;
+  stroke: #000000;
+  stroke-width: 2;          /* Thickness of the shadow */
+  opacity: 0.15;            /* Softness/transparency of the shadow */
+  filter: url(#simple-blur); /* Applies the blur effect */
+}
 
-  .center-button.is-active #circle9 {
-    fill: url(#dome-gradient-green);
-  }
+/* ADDED: Activates the intense green neon inner/outer blend matrices across targeted states */
+.center-button:hover,
+.center-button:focus,
+.center-button:active {
+  filter: url(#green-glow-matrix);
+}
+.center-button:hover #circle9 { 
 
-  .center-button.is-active #path9 {
-    fill: var(--circle-pad-success);
-  }
+}
 
-  .center-button {
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.12),
-      inset 0 2px 4px rgba(0, 0, 0, 0.15);
-  }
+/* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
+.wheel-button:focus path,
+.wheel-button:focus circle {
+  stroke: none; 
+}
 
-  .center-button.is-active {
-    filter: url(#green-glow-matrix);
-  }
+/* --- Fixed Microphone State Handling --- */
+.mic-icon path {
+  fill: var(--circle-pad-text-2); /* Gray base state */
+  transition: fill 0.2s ease;
+}
 
-  /* Hover-only accent ring on desktop/trackpad without changing
-     the mic's fill state. Toggle state remains class-driven. */
-  @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover {
-      filter: url(#green-glow-matrix);
-    }
-  }
+/* Forces the icon to turn pure black when hovered, focused, or active */
+.center-button:hover .mic-icon path,
+.center-button:focus .mic-icon path,
+.center-button:active .mic-icon path {
+  fill: var(--circle-pad-text-1) !important; 
+}
 
-  .wheel-button:focus path,
-  .wheel-button:focus circle {
-    stroke: none;
-  }
+/* --- Fixed Chevron State Handling --- */
+.slice-chevron {
+  stroke: #555555;
+  transition: stroke 0.15s ease;
+}
 
-  .mic-icon path {
-    fill: var(--circle-pad-text-2);
-    transition: fill 0.2s ease;
-  }
+/* 1. Turns white when hovered AND when actively clicked down so it stays visible against blue backgrounds */
+.slice-button:hover .slice-chevron,
+.slice-button:active .slice-chevron {
+  stroke: #ffffff !important;
+}
 
-  .center-button.is-active .mic-icon path {
-    fill: var(--circle-pad-text-1) !important;
-  }
-
-  .inner-shadow-overlay {
-    fill: none;
-    stroke: #000000;
-    stroke-width: 2;
-    opacity: 0.15;
-    filter: url(#simple-blur);
-  }
-
-  .main-circle {
-    filter: url(#outside-shadow);
-  }
+/* 2. Reverts instantly back to dark gray when the cursor leaves the button area, preventing sticky post-click styles */
+.slice-button:not(:hover) .slice-chevron {
+  stroke: #555555 !important;
+}
 `;
 
 const CIRCLE_PAD_SVG = `
