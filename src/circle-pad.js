@@ -111,11 +111,6 @@ const CIRCLE_PAD_STYLES = `
     transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   }
 
-  .slice-button path {
-    fill: var(--circle-pad-bg-1);
-    /* Default (release) fade-out speed */
-    transition: fill 140ms ease-out;
-  }
 
   @media (hover: hover) {
     .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
@@ -136,19 +131,9 @@ const CIRCLE_PAD_STYLES = `
     transition: stroke 140ms ease-out;
   }
 
-  .slice-button.is-pressed .slice-chevron {
-    stroke: #ffffff !important;
-    /* Faster press-in so taps feel immediate */
-    transition-duration: 70ms;
-    transition-timing-function: ease-in;
-  }
-
   /* Touch safety override: some mobile browsers leave pseudo
      hover/active artifacts. Force base visuals unless JS marks
      the slice as actively pressed. */
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button path {
-    fill: var(--circle-pad-bg-1) !important;
-  }
 
   .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
     stroke: #555555 !important;
@@ -158,15 +143,6 @@ const CIRCLE_PAD_STYLES = `
     fill: var(--circle-pad-dark-primary) !important;
   }
 
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
-    stroke: #ffffff !important;
-  }
-
-  @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
-      stroke: #ffffff !important;
-    }
-  }
 
   .center-button #path9 {
     fill: #bababa;
