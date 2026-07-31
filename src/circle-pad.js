@@ -3,16 +3,68 @@
  * ---------------------------------------------------------------
  * Reusable SVG wheel custom element: <circle-pad-control>
  *
+ * Mini API / integration notes
+ *
+ * 1) Register + render
+ *    - This module defines <circle-pad-control> once per page via
+ *      customElements.define("circle-pad-control", CirclePadControl).
+ *    - Render the element anywhere:
+ *        <circle-pad-control id="pad"></circle-pad-control>
+ *
+ * 2) Events to wire
+ *    - Direction slices are momentary:
+ *        "circle-pad-press"   detail: { action }
+ *        "circle-pad-release" detail: { action }
+ *      Actions: up, up-right, right, down-right, down,
+ *               down-left, left, up-left
+ *    - Center mic is a toggle:
+ *        "circle-pad-toggle"  detail: { action: "mic", active }
+ *
+ * 3) Sizing behavior
+ *    - The control scales to available space (SVG uses a square viewBox,
+ *      host/wrapper use width:100%, height:100%, aspect-ratio:1/1).
+ *    - Practical pattern: place it inside a sized container div to control
+ *      final rendered size.
+ *
+ * 4) Standalone app example
+ *    <div style="width: 280px; height: 280px;">
+ *      <circle-pad-control id="pad"></circle-pad-control>
+ *    </div>
+ *    <script type="module">
+ *      import "./circle-pad.js";
+ *      const pad = document.getElementById("pad");
+ *      pad.addEventListener("circle-pad-press", (e) => {
+ *        console.log("press", e.detail.action);
+ *      });
+ *      pad.addEventListener("circle-pad-release", (e) => {
+ *        console.log("release", e.detail.action);
+ *      });
+ *      pad.addEventListener("circle-pad-toggle", (e) => {
+ *        console.log("mic", e.detail.active ? "on" : "off");
+ *      });
+ *    </script>
+ *
+ * 5) Home Assistant custom card example
+ *    // In your card render/template:
+ *    // <div style="width: 240px; height: 240px; margin: 0 auto;">
+ *    //   <circle-pad-control id="pad"></circle-pad-control>
+ *    // </div>
+ *    //
+ *    // In your card class setup after render:
+ *    // const pad = this.shadowRoot.getElementById("pad");
+ *    // pad.addEventListener("circle-pad-press", (e) => {
+ *    //   this._handleDirectionStart(e.detail.action);
+ *    // });
+ *    // pad.addEventListener("circle-pad-release", (e) => {
+ *    //   this._handleDirectionStop(e.detail.action);
+ *    // });
+ *    // pad.addEventListener("circle-pad-toggle", (e) => {
+ *    //   this._setMicEnabled(e.detail.active);
+ *    // });
+ *
  * This module adapts the control surface from circle-pad.html
  * (wheel-responsive-wrapper + svg), ignoring that file's external
  * parent panel wrapper.
- *
- * Direction slices are momentary buttons:
- *   - dispatch circle-pad-press on press
- *   - dispatch circle-pad-release on release
- *
- * Center mic is a toggle button:
- *   - dispatch circle-pad-toggle { action: 'mic', active }
  * ---------------------------------------------------------------
  */
 
