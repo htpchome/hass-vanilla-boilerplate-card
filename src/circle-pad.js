@@ -48,121 +48,7 @@ const EVT_PRESS = "circle-pad-press";
 const EVT_RELEASE = "circle-pad-release";
 const EVT_TOGGLE = "circle-pad-toggle";
 
-const SLICE_DEFS = Object.freeze([
-  {
-    action: CIRCLE_PAD_ACTIONS.RIGHT,
-    label: "Right",
-    wedgePath:
-      "m 139.38408,44.790631 a 47.849998,47.849998 0 0 1 0,44.189339 L 96.940613,66.8853 Z",
-    chevronPath: "M 131.0 64.88 L 133.0 66.88 L 131.0 68.88",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.DOWN_RIGHT,
-    label: "Down-right",
-    wedgePath:
-      "m 139.38408,88.97997 a 47.849998,47.849998 0 0 1 -20.3488,20.3488 L 96.940613,66.8853 Z",
-    chevronPath: "M 116.5 88.5 L 118.5 88.5 L 118.5 86.5",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.DOWN,
-    label: "Down",
-    wedgePath:
-      "m 119.03528,109.32877 a 47.849998,47.849998 0 0 1 -44.189339,0 L 96.940613,66.8853 Z",
-    chevronPath: "M 98.94 103.5 L 96.94 105.5 L 94.94 103.5",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.UP_RIGHT,
-    label: "Up-right",
-    wedgePath:
-      "m 119.03528,24.441832 a 47.849998,47.849998 0 0 1 20.3488,20.348799 L 96.940613,66.8853 Z",
-    chevronPath: "M 116.5 45.26 L 118.5 45.26 L 118.5 47.26",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.UP,
-    label: "Up",
-    wedgePath:
-      "m 74.845941,24.441833 a 47.849998,47.849998 0 0 1 44.189339,-10e-7 L 96.940613,66.8853 Z",
-    chevronPath: "M 94.94 30.26 L 96.94 28.26 L 98.94 30.26",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.UP_LEFT,
-    label: "Up-left",
-    wedgePath:
-      "M 54.497146,44.790629 A 47.849998,47.849998 0 0 1 74.845941,24.441833 L 96.940613,66.8853 Z",
-    chevronPath: "M 77.38 45.26 L 75.38 45.26 L 75.38 47.26",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.DOWN_LEFT,
-    label: "Down-left",
-    wedgePath:
-      "M 74.845941,109.32877 A 47.849998,47.849998 0 0 1 54.497146,88.979971 L 96.940613,66.8853 Z",
-    chevronPath: "M 77.38 88.5 L 75.38 88.5 L 75.38 86.5",
-  },
-  {
-    action: CIRCLE_PAD_ACTIONS.LEFT,
-    label: "Left",
-    wedgePath:
-      "m 54.497146,88.979971 a 47.849998,47.849998 0 0 1 0,-44.189342 L 96.940613,66.8853 Z",
-    chevronPath: "M 62.88 68.88 L 60.88 66.88 L 62.88 64.88",
-  },
-]);
-
-const renderSliceButtons = () =>
-  SLICE_DEFS.map(
-    (slice) =>
-      '<g class="wheel-button slice-button" role="button" tabindex="0" aria-label="' +
-      slice.label +
-      '" ' +
-      CIRCLE_PAD_DATA_ACTION +
-      '="' +
-      slice.action +
-      '">' +
-      '<path d="' +
-      slice.wedgePath +
-      '"></path>' +
-      '<path class="slice-chevron" d="' +
-      slice.chevronPath +
-      '" fill="none" stroke="#555555" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
-      "</g>",
-  ).join("");
-
-const DEFAULT_OPTIONS = Object.freeze({
-  minHeight: 220,
-  pressInMs: 70,
-  releaseMs: 140,
-});
-
-const normalizeOptions = (nextOptions = {}, baseOptions = DEFAULT_OPTIONS) => {
-  const normalized = { ...baseOptions };
-
-  if (
-    Object.prototype.hasOwnProperty.call(nextOptions, "minHeight") &&
-    Number.isFinite(nextOptions.minHeight) &&
-    nextOptions.minHeight > 0
-  ) {
-    normalized.minHeight = Math.round(nextOptions.minHeight);
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(nextOptions, "pressInMs") &&
-    Number.isFinite(nextOptions.pressInMs) &&
-    nextOptions.pressInMs >= 0
-  ) {
-    normalized.pressInMs = Math.round(nextOptions.pressInMs);
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(nextOptions, "releaseMs") &&
-    Number.isFinite(nextOptions.releaseMs) &&
-    nextOptions.releaseMs >= 0
-  ) {
-    normalized.releaseMs = Math.round(nextOptions.releaseMs);
-  }
-
-  return normalized;
-};
-
-const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
+const CIRCLE_PAD_STYLES = `
   :host {
     display: block;
     --circle-pad-bg-1: var(--primary-background-color);
@@ -189,7 +75,7 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
     position: relative;
     overflow: visible;
     aspect-ratio: 1 / 1;
-    min-height: ${minHeight}px;
+    min-height: 220px;
   }
 
   .${CIRCLE_PAD_CLASS}__wrapper::before {
@@ -228,50 +114,33 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
   .slice-button path {
     fill: var(--circle-pad-bg-1);
     /* Default (release) fade-out speed */
-    transition: fill ${releaseMs}ms ease-out;
+    transition: fill 140ms ease-out;
   }
 
   @media (hover: hover) {
-    .slice-button:hover path {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
       fill: var(--circle-pad-primary);
     }
-
-    .slice-button:hover .slice-chevron {
-      stroke: #ffffff;
-    }
-  }
-
-  .slice-button:active path {
-    fill: var(--circle-pad-dark-primary);
-    /* Faster press-in so taps feel immediate */
-    transition-duration: ${pressInMs}ms;
-    transition-timing-function: ease-in;
   }
 
   .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary);
     /* Faster press-in so taps feel immediate */
-    transition-duration: ${pressInMs}ms;
+    transition-duration: 70ms;
     transition-timing-function: ease-in;
   }
 
-  .slice-button:active .slice-chevron,
-  .slice-button:focus .slice-chevron,
-  .slice-button:focus-visible .slice-chevron {
-    stroke: #ffffff;
+  .slice-chevron {
+    stroke: #555555;
+    /* Default (release) fade-out speed */
+    transition: stroke 140ms ease-out;
   }
 
   .slice-button.is-pressed .slice-chevron {
-    stroke: #ffffff;
-  }
-
-  .slice-button:focus path,
-  .slice-button:focus-visible path {
-    fill: var(--circle-pad-primary);
-  }
-
-  .slice-button:not(:hover) .slice-chevron {
-    stroke: #555555;
+    stroke: #ffffff !important;
+    /* Faster press-in so taps feel immediate */
+    transition-duration: 70ms;
+    transition-timing-function: ease-in;
   }
 
   /* Touch safety override: some mobile browsers leave pseudo
@@ -285,8 +154,18 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
     stroke: #555555 !important;
   }
 
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button:active path {
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary) !important;
+  }
+
+  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
+    stroke: #ffffff !important;
+  }
+
+  @media (hover: hover) {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
+      stroke: #ffffff !important;
+    }
   }
 
   .center-button #path9 {
@@ -328,11 +207,6 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
     stroke: none;
   }
 
-  .wheel-button:focus-visible path,
-  .wheel-button:focus-visible circle {
-    stroke: none;
-  }
-
   .mic-icon path {
     fill: var(--circle-pad-text-2);
     transition: fill 0.2s ease;
@@ -355,7 +229,7 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
   }
 `;
 
-const buildCirclePadSvg = () => `
+const CIRCLE_PAD_SVG = `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
     <svg viewBox="0 0 96 96" version="1.1" aria-label="Circle pad" role="group">
       <defs>
@@ -407,7 +281,46 @@ const buildCirclePadSvg = () => `
 
       <g id="main-circle" class="main-circle" transform="translate(-48.940613,-18.8853)">
         <circle style="fill:#646464;" id="circle2" cx="96.940613" cy="66.8853" r="47.85"></circle>
-        ${renderSliceButtons()}
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Right" ${CIRCLE_PAD_DATA_ACTION}="right">
+          <path d="m 139.38408,44.790631 a 47.849998,47.849998 0 0 1 0,44.189339 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 131.0 64.88 L 133.0 66.88 L 131.0 68.88" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down-right" ${CIRCLE_PAD_DATA_ACTION}="down-right">
+          <path d="m 139.38408,88.97997 a 47.849998,47.849998 0 0 1 -20.3488,20.3488 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 116.5 88.5 L 118.5 88.5 L 118.5 86.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down" ${CIRCLE_PAD_DATA_ACTION}="down">
+          <path d="m 119.03528,109.32877 a 47.849998,47.849998 0 0 1 -44.189339,0 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 98.94 103.5 L 96.94 105.5 L 94.94 103.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up-right" ${CIRCLE_PAD_DATA_ACTION}="up-right">
+          <path d="m 119.03528,24.441832 a 47.849998,47.849998 0 0 1 20.3488,20.348799 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 116.5 45.26 L 118.5 45.26 L 118.5 47.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up" ${CIRCLE_PAD_DATA_ACTION}="up">
+          <path d="m 74.845941,24.441833 a 47.849998,47.849998 0 0 1 44.189339,-10e-7 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 94.94 30.26 L 96.94 28.26 L 98.94 30.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up-left" ${CIRCLE_PAD_DATA_ACTION}="up-left">
+          <path d="M 54.497146,44.790629 A 47.849998,47.849998 0 0 1 74.845941,24.441833 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 77.38 45.26 L 75.38 45.26 L 75.38 47.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down-left" ${CIRCLE_PAD_DATA_ACTION}="down-left">
+          <path d="M 74.845941,109.32877 A 47.849998,47.849998 0 0 1 54.497146,88.979971 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 77.38 88.5 L 75.38 88.5 L 75.38 86.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+
+        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Left" ${CIRCLE_PAD_DATA_ACTION}="left">
+          <path d="m 54.497146,88.979971 a 47.849998,47.849998 0 0 1 0,-44.189342 L 96.940613,66.8853 Z"></path>
+          <path class="slice-chevron" d="M 62.88 68.88 L 60.88 66.88 L 62.88 64.88" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
       </g>
 
       <g id="mic-button" transform="translate(-48.940613,-18.8853)">
@@ -427,19 +340,14 @@ const buildCirclePadSvg = () => `
 `;
 
 class CirclePadControl extends HTMLElement {
-  #activeDirectionBtn = null;
-  #activeDirectionAction = null;
-  #activePointerId = null;
-  #activeMic = false;
-  #mounted = false;
-  #eventsAbort = null;
-  #rootEl = null;
-  #styleEl = null;
-  #options = { ...DEFAULT_OPTIONS };
-
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._pressed = new Set();
+    this._pressedByPointer = new Map();
+    this._activeMic = false;
+    this._mounted = false;
+    this._wired = false;
   }
 
   connectedCallback() {
@@ -448,55 +356,30 @@ class CirclePadControl extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.#activeDirectionBtn = null;
-    this.#activeDirectionAction = null;
-    this.#activePointerId = null;
-    if (this.#eventsAbort) {
-      this.#eventsAbort.abort();
-      this.#eventsAbort = null;
-    }
-  }
-
-  setOptions(nextOptions = {}) {
-    const merged = normalizeOptions(nextOptions, this.#options);
-    const changed =
-      merged.minHeight !== this.#options.minHeight ||
-      merged.pressInMs !== this.#options.pressInMs ||
-      merged.releaseMs !== this.#options.releaseMs;
-
-    if (!changed) return;
-    this.#options = merged;
-    if (this.#styleEl) {
-      this.#styleEl.textContent = buildCirclePadStyles(this.#options);
-    }
-  }
-
-  getOptions() {
-    return { ...this.#options };
+    this._pressed.clear();
   }
 
   setActive(action, active) {
     if (action !== CIRCLE_PAD_ACTIONS.MIC) return;
-    this.#activeMic = Boolean(active);
+    this._activeMic = Boolean(active);
     this._applyMicState();
   }
 
   getState() {
-    return { mic: this.#activeMic };
+    return { mic: this._activeMic };
   }
 
   _mount() {
-    if (this.#mounted) return;
-    this.#mounted = true;
+    if (this._mounted) return;
+    this._mounted = true;
 
     const style = document.createElement("style");
-    style.textContent = buildCirclePadStyles(this.#options);
-    this.#styleEl = style;
+    style.textContent = CIRCLE_PAD_STYLES;
 
     const root = document.createElement("div");
     root.className = CIRCLE_PAD_CLASS;
-    root.innerHTML = buildCirclePadSvg();
-    this.#rootEl = root;
+    root.innerHTML = CIRCLE_PAD_SVG;
+    this._rootEl = root;
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
@@ -504,229 +387,139 @@ class CirclePadControl extends HTMLElement {
   }
 
   _wireEvents() {
-    if (this.#eventsAbort || !this.shadowRoot) return;
-    this.#eventsAbort = new AbortController();
-    const listenerOpts = { signal: this.#eventsAbort.signal };
+    if (this._wired || !this.shadowRoot) return;
+    this._wired = true;
 
     const findBtn = (target) =>
       target instanceof Element
         ? target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]")
         : null;
 
-    const setPressedVisual = (btn, pressed) => {
-      if (!btn) return;
-      btn.classList.toggle("is-pressed", pressed);
-    };
-
-    const setHoveredVisual = (btn, hovered) => {
-      if (!btn) return;
-      btn.classList.toggle("is-hovered", hovered);
-    };
-
     const clearPressed = (btn) => {
       if (!btn) return;
-      const isActive = btn === this.#activeDirectionBtn;
-      setPressedVisual(btn, false);
-      if (!isActive) return false;
-      this.#activeDirectionBtn = null;
-      this.#activeDirectionAction = null;
-      this.#activePointerId = null;
-      return true;
-    };
-
-    const clearHovered = (btn) => {
-      if (!btn) return;
-      setHoveredVisual(btn, false);
-    };
-
-    const clearAllPressed = (emitRelease = true) => {
-      const action = this.#activeDirectionAction;
-      const btn = this.#activeDirectionBtn;
-      if (!btn && !action) {
-        if (!this.shadowRoot) return;
-        this.shadowRoot
-          .querySelectorAll(".slice-button.is-pressed")
-          .forEach((el) => setPressedVisual(el, false));
-        return;
-      }
-
-      if (btn) {
-        setPressedVisual(btn, false);
-      }
-      this.#activeDirectionBtn = null;
-      this.#activeDirectionAction = null;
-      this.#activePointerId = null;
-
-      if (emitRelease && action) {
-        this._dispatch(EVT_RELEASE, { action });
-      }
+      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+      if (!this._pressed.has(action)) return;
+      this._pressed.delete(action);
+      btn.classList.remove("is-pressed");
     };
 
     const releaseByPointer = (ev) => {
       if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
         return false;
       }
-      if (ev.pointerId !== this.#activePointerId || !this.#activeDirectionBtn) {
-        return false;
-      }
-      const action = this.#activeDirectionAction;
-      const released = clearPressed(this.#activeDirectionBtn);
-      if (released) {
-        this._dispatch(EVT_RELEASE, { action });
-      }
+      const state = this._pressedByPointer.get(ev.pointerId);
+      if (!state) return false;
+      this._pressedByPointer.delete(ev.pointerId);
+      clearPressed(state.btn);
+      this._dispatch(EVT_RELEASE, { action: state.action });
       return true;
     };
 
     const pressDirection = (btn, pointerId) => {
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
       if (!DIRECTION_ACTIONS.has(action)) return;
-      if (
-        btn === this.#activeDirectionBtn &&
-        action === this.#activeDirectionAction
-      ) {
-        this.#activePointerId = pointerId ?? null;
-        return;
+      if (this._pressed.has(action)) return;
+      this._pressed.add(action);
+      if (pointerId !== null && pointerId !== undefined) {
+        this._pressedByPointer.set(pointerId, { action, btn });
       }
-
-      clearAllPressed(true);
-      this.#activeDirectionBtn = btn;
-      this.#activeDirectionAction = action;
-      this.#activePointerId = pointerId ?? null;
-      setPressedVisual(btn, true);
+      btn.classList.add("is-pressed");
       this._dispatch(EVT_PRESS, { action });
     };
 
-    this.shadowRoot.addEventListener(
-      "pointerdown",
-      (ev) => {
-        if (ev.pointerType === "touch") {
-          this._setInputMode("touch");
-        } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
-          this._setInputMode("mouse");
-          if (
-            this.#activeDirectionBtn &&
-            this.#activePointerId !== null &&
-            this.#activePointerId !== ev.pointerId
-          ) {
-            clearAllPressed(true);
-          }
+    this.shadowRoot.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType === "touch") {
+        this._setInputMode("touch");
+      } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
+        this._setInputMode("mouse");
+      }
+
+      const btn = findBtn(ev.target);
+      if (!btn) return;
+      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+      if (action === CIRCLE_PAD_ACTIONS.MIC) return;
+      pressDirection(btn, ev.pointerId);
+      if (
+        typeof btn.setPointerCapture === "function" &&
+        ev.pointerId !== null
+      ) {
+        try {
+          btn.setPointerCapture(ev.pointerId);
+        } catch (_e) {
+          /* ignore */
         }
-
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-        pressDirection(btn, ev.pointerId);
-        if (
-          typeof btn.setPointerCapture === "function" &&
-          ev.pointerId !== null
-        ) {
-          try {
-            btn.setPointerCapture(ev.pointerId);
-          } catch (_e) {
-            /* ignore */
-          }
-        }
-      },
-      listenerOpts,
-    );
-
-    this.shadowRoot.addEventListener(
-      "pointerover",
-      (ev) => {
-        if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (!DIRECTION_ACTIONS.has(action)) return;
-        setHoveredVisual(btn, true);
-      },
-      listenerOpts,
-    );
-
-    this.shadowRoot.addEventListener(
-      "pointerout",
-      (ev) => {
-        if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-        clearHovered(btn);
-      },
-      listenerOpts,
-    );
+      }
+    });
 
     const release = (ev) => {
       if (releaseByPointer(ev)) return;
       const btn = findBtn(ev.target);
       if (!btn) return;
       const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      const released = clearPressed(btn);
-      if (!released) return;
+      if (!this._pressed.has(action)) return;
+      clearPressed(btn);
       this._dispatch(EVT_RELEASE, { action });
     };
-    this.shadowRoot.addEventListener("pointerup", release, listenerOpts);
-    this.shadowRoot.addEventListener("pointercancel", release, listenerOpts);
-    this.shadowRoot.addEventListener(
-      "keydown",
-      (ev) => {
-        if (ev.key !== "Enter" && ev.key !== " ") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-        ev.preventDefault();
-        pressDirection(btn, null);
-      },
-      listenerOpts,
-    );
+    this.shadowRoot.addEventListener("pointerup", release);
+    this.shadowRoot.addEventListener("pointercancel", release);
 
-    this.shadowRoot.addEventListener(
-      "keyup",
-      (ev) => {
-        if (ev.key !== "Enter" && ev.key !== " ") return;
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        const released = clearPressed(btn);
-        if (!released) return;
-        this._dispatch(EVT_RELEASE, { action });
-      },
-      listenerOpts,
-    );
+    this.shadowRoot.addEventListener("pointerleave", (ev) => {
+      if (releaseByPointer(ev)) return;
+      const btn = findBtn(ev.target);
+      if (!btn) return;
+      if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+      if (!this._pressed.has(action)) return;
+      clearPressed(btn);
+      this._dispatch(EVT_RELEASE, { action });
+    });
 
-    this.shadowRoot.addEventListener(
-      "click",
-      (ev) => {
-        const btn = findBtn(ev.target);
-        if (!btn) return;
-        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-        if (action !== CIRCLE_PAD_ACTIONS.MIC) {
-          clearAllPressed(false);
-          return;
-        }
-        this.#activeMic = !this.#activeMic;
-        this._applyMicState();
-        this._dispatch(EVT_TOGGLE, {
-          action: CIRCLE_PAD_ACTIONS.MIC,
-          active: this.#activeMic,
-        });
-      },
-      listenerOpts,
-    );
+    this.shadowRoot.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      const btn = findBtn(ev.target);
+      if (!btn) return;
+      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+      if (action === CIRCLE_PAD_ACTIONS.MIC) return;
+      ev.preventDefault();
+      pressDirection(btn, null);
+    });
+
+    this.shadowRoot.addEventListener("keyup", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      const btn = findBtn(ev.target);
+      if (!btn) return;
+      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+      if (!this._pressed.has(action)) return;
+      clearPressed(btn);
+      this._dispatch(EVT_RELEASE, { action });
+    });
+
+    this.shadowRoot.addEventListener("click", (ev) => {
+      const btn = findBtn(ev.target);
+      if (!btn) return;
+      if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
+        return;
+      }
+      this._activeMic = !this._activeMic;
+      this._applyMicState();
+      this._dispatch(EVT_TOGGLE, {
+        action: CIRCLE_PAD_ACTIONS.MIC,
+        active: this._activeMic,
+      });
+    });
   }
 
   _applyMicState() {
     if (!this.shadowRoot) return;
     const mic = this.shadowRoot.querySelector(".center-button");
     if (!mic) return;
-    mic.classList.toggle("is-active", this.#activeMic);
-    mic.setAttribute("aria-pressed", String(this.#activeMic));
+    mic.classList.toggle("is-active", this._activeMic);
+    mic.setAttribute("aria-pressed", String(this._activeMic));
   }
 
   _setInputMode(mode) {
-    if (!this.#rootEl) return;
-    this.#rootEl.setAttribute("data-input-mode", mode);
+    if (!this._rootEl) return;
+    this._rootEl.setAttribute("data-input-mode", mode);
   }
 
   _dispatch(type, detail) {
