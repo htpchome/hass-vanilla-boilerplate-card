@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.82";
+  const CARD_VERSION = "0.1.83";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -2290,13 +2290,16 @@
       }
     }
 
-    _handlePointerRelease(ev) {
+    _handlePointerEnd(ev, ignoreRelatedTarget = false) {
       if (this._releaseDirectionByPointer(ev)) return;
 
       const btn = this._findActionButton(ev.target);
       if (!btn) return;
-      const action = this._getButtonAction(btn);
+      if (ignoreRelatedTarget && ev.relatedTarget && btn.contains(ev.relatedTarget)) {
+        return;
+      }
 
+      const action = this._getButtonAction(btn);
       if (this._isMicAction(action)) {
         this._setMicPressed(btn, false);
         return;
@@ -2307,22 +2310,12 @@
       this._dispatch(EVT_RELEASE, { action });
     }
 
+    _handlePointerRelease(ev) {
+      this._handlePointerEnd(ev, false);
+    }
+
     _handlePointerLeave(ev) {
-      if (this._releaseDirectionByPointer(ev)) return;
-
-      const btn = this._findActionButton(ev.target);
-      if (!btn) return;
-      if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-
-      const action = this._getButtonAction(btn);
-      if (this._isMicAction(action)) {
-        this._setMicPressed(btn, false);
-        return;
-      }
-
-      if (!DIRECTION_ACTIONS.has(action)) return;
-      this._clearDirectionPressed(btn);
-      this._dispatch(EVT_RELEASE, { action });
+      this._handlePointerEnd(ev, true);
     }
 
     _wireControlEvents() {
