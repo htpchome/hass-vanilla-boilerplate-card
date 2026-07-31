@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.54";
+  const CARD_VERSION = "0.1.55";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1965,7 +1965,7 @@
     transition: stroke ${releaseMs}ms ease-out;
   }
 
-  .slice-chevron.is-pressed,
+  
   .slice-chevron.is-hovered {
     stroke: #ffffff !important;
   }
@@ -2336,7 +2336,10 @@
       const pressDirection = (btn, pointerId) => {
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(action)) return;
-        if (btn === this.#activeDirectionBtn && action === this.#activeDirectionAction) {
+        if (
+          btn === this.#activeDirectionBtn &&
+          action === this.#activeDirectionAction
+        ) {
           this.#activePointerId = pointerId ?? null;
           return;
         }
