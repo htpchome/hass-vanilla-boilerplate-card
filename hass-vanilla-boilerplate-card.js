@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.75";
+  const CARD_VERSION = "0.1.77";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1827,15 +1827,27 @@
   }
 
 .slice-button path { fill: var(--circle-pad-bg-1) }
-.slice-button:hover path { fill: var(--circle-pad-primary) }
+
+.slice-button.is-pressed path,
 .slice-button:active path { fill: var(--circle-pad-dark-primary) }
+
+@media (hover: hover) {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
+    fill: var(--circle-pad-primary);
+  }
+}
 
 /* Center Hub Base + Hover */
 .center-button #path9 { fill: #bababa; }
 .center-button #circle9 { fill: url(#dome-gradient);   }
-.center-button:hover #circle9 { filter: url(#button-shadow-hover);  }
 .center-button:hover #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
+
+@media (hover: hover) {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover #circle9 {
+    filter: url(#button-shadow-hover);
+  }
+}
 
 /* Persistent mic-on visuals driven by component state */
 .center-button.is-active #circle9 {
@@ -1860,8 +1872,7 @@
 }
 
 /* Green Dome Focus State (Keyboard Navigation) */
-.center-button:focus #circle9,
-.center-button:focus-within #circle9 { 
+.center-button:focus-visible #circle9 {
   outline: none; /* Clears default browser ring if you are using your own filters */
 }
 
@@ -1899,10 +1910,15 @@
 }
 
 /* Forces the icon to turn pure black when hovered, focused, or active */
-.center-button:hover .mic-icon path,
-.center-button:focus .mic-icon path,
+.center-button:focus-visible .mic-icon path,
 .center-button:active .mic-icon path {
   fill: var(--circle-pad-text-1) !important; 
+}
+
+@media (hover: hover) {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-icon path {
+    fill: var(--circle-pad-text-1) !important;
+  }
 }
 
 /* --- Fixed Chevron State Handling --- */
@@ -1912,14 +1928,47 @@
 }
 
 /* 1. Turns white when hovered AND when actively clicked down so it stays visible against blue backgrounds */
-.slice-button:hover .slice-chevron,
+.slice-button.is-pressed .slice-chevron,
 .slice-button:active .slice-chevron {
   stroke: #ffffff !important;
 }
 
-/* 2. Reverts instantly back to dark gray when the cursor leaves the button area, preventing sticky post-click styles */
-.slice-button:not(:hover) .slice-chevron {
+@media (hover: hover) {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
+    stroke: #ffffff !important;
+  }
+}
+
+/* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button path {
+  fill: var(--circle-pad-bg-1) !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
   stroke: #555555 !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
+  fill: var(--circle-pad-dark-primary) !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
+  stroke: #ffffff !important;
+}
+
+/* Touch-mode override: prevent center hover/focus visuals from sticking between taps. */
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) #circle9 {
+  fill: url(#dome-gradient) !important;
+  filter: url(#button-shadow) !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-active #circle9 {
+  fill: url(#dome-gradient-green) !important;
+  filter: url(#button-shadow-hover) !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) .mic-icon path {
+  fill: var(--circle-pad-text-2) !important;
 }
 `;
 
@@ -2073,7 +2122,10 @@
           );
         }
         if (this._onPointerLeave) {
-          this.shadowRoot.removeEventListener("pointerleave", this._onPointerLeave);
+          this.shadowRoot.removeEventListener(
+            "pointerleave",
+            this._onPointerLeave,
+          );
         }
         if (this._onClick) {
           this.shadowRoot.removeEventListener("click", this._onClick);
@@ -2160,10 +2212,10 @@
         const btn = findBtn(ev.target);
         if (!btn) return;
 
+        this._setInputMode(ev.pointerType === "touch" ? "touch" : "mouse");
+
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
         if (!DIRECTION_ACTIONS.has(action)) return;
-
-        this._setInputMode(ev.pointerType === "touch" ? "touch" : "mouse");
         if (this._pressed.has(action)) return;
 
         this._pressed.add(action);
@@ -2223,6 +2275,16 @@
           action: CIRCLE_PAD_ACTIONS.MIC,
           active: this._activeMic,
         });
+
+        const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
+        if (
+          this._rootEl &&
+          this._rootEl.getAttribute("data-input-mode") === "touch" &&
+          activeEl &&
+          typeof activeEl.blur === "function"
+        ) {
+          activeEl.blur();
+        }
       };
 
       this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
