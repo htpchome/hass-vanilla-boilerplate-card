@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.77";
+  const CARD_VERSION = "0.1.78";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1927,15 +1927,18 @@
   transition: stroke 0.15s ease;
 }
 
-/* 1. Turns white when hovered AND when actively clicked down so it stays visible against blue backgrounds */
-.slice-button.is-pressed .slice-chevron,
-.slice-button:active .slice-chevron {
+/* Keep chevrons bright while a slice is actively pressed. */
+.slice-button.is-pressed .slice-chevron {
   stroke: #ffffff !important;
 }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
     stroke: #ffffff !important;
+  }
+
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
+    stroke: #555555 !important;
   }
 }
 

@@ -212,15 +212,18 @@ const CIRCLE_PAD_STYLES = `
   transition: stroke 0.15s ease;
 }
 
-/* 1. Turns white when hovered AND when actively clicked down so it stays visible against blue backgrounds */
-.slice-button.is-pressed .slice-chevron,
-.slice-button:active .slice-chevron {
+/* Keep chevrons bright while a slice is actively pressed. */
+.slice-button.is-pressed .slice-chevron {
   stroke: #ffffff !important;
 }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
     stroke: #ffffff !important;
+  }
+
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
+    stroke: #555555 !important;
   }
 }
 
