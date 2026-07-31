@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.47";
+  const CARD_VERSION = "0.1.48";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1947,7 +1947,7 @@
   }
 
   @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered path {
       fill: var(--circle-pad-primary);
     }
   }
@@ -1992,7 +1992,7 @@
   }
 
   @media (hover: hover) {
-    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
+    .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-hovered .slice-chevron {
       stroke: #ffffff !important;
     }
   }
@@ -2222,6 +2222,18 @@
         btn.classList.remove("is-pressed");
       };
 
+      const clearHovered = (btn) => {
+        if (!btn) return;
+        btn.classList.remove("is-hovered");
+      };
+
+      const clearAllHovered = () => {
+        if (!this.shadowRoot) return;
+        this.shadowRoot
+          .querySelectorAll(".slice-button.is-hovered")
+          .forEach((el) => el.classList.remove("is-hovered"));
+      };
+
       const releaseByPointer = (ev) => {
         if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
           return false;
@@ -2251,6 +2263,7 @@
         (ev) => {
           if (ev.pointerType === "touch") {
             this._setInputMode("touch");
+            clearAllHovered();
           } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
             this._setInputMode("mouse");
           }
@@ -2274,6 +2287,31 @@
         listenerOpts,
       );
 
+      this.shadowRoot.addEventListener(
+        "pointerover",
+        (ev) => {
+          if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
+          const btn = findBtn(ev.target);
+          if (!btn) return;
+          const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+          if (!DIRECTION_ACTIONS.has(action)) return;
+          btn.classList.add("is-hovered");
+        },
+        listenerOpts,
+      );
+
+      this.shadowRoot.addEventListener(
+        "pointerout",
+        (ev) => {
+          if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
+          const btn = findBtn(ev.target);
+          if (!btn) return;
+          if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+          clearHovered(btn);
+        },
+        listenerOpts,
+      );
+
       const release = (ev) => {
         if (releaseByPointer(ev)) return;
         const btn = findBtn(ev.target);
@@ -2285,6 +2323,13 @@
       };
       this.shadowRoot.addEventListener("pointerup", release, listenerOpts);
       this.shadowRoot.addEventListener("pointercancel", release, listenerOpts);
+      this.shadowRoot.addEventListener(
+        "pointerleave",
+        () => {
+          clearAllHovered();
+        },
+        listenerOpts,
+      );
 
       this.shadowRoot.addEventListener(
         "pointerleave",
