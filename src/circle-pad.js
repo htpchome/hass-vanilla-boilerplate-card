@@ -122,7 +122,7 @@ const renderSliceButtons = () =>
       '"></path>' +
       '<path class="slice-chevron" d="' +
       slice.chevronPath +
-      '" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '" fill="none" stroke="#555555" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
       "</g>",
   ).join("");
 
@@ -244,23 +244,6 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
     transition-timing-function: ease-in;
   }
 
-  .slice-chevron {
-    stroke: #555555;
-    /* Default (release) fade-out speed */
-    transition: stroke ${releaseMs}ms ease-out;
-  }
-
-  .slice-chevron.is-pressed,
-  .slice-chevron.is-hovered {
-    stroke: #ffffff !important;
-  }
-
-  .slice-chevron.is-pressed {
-    /* Faster press-in so taps feel immediate */
-    transition-duration: ${pressInMs}ms;
-    transition-timing-function: ease-in;
-  }
-
   /* Touch safety override: some mobile browsers leave pseudo
      hover/active artifacts. Force base visuals unless JS marks
      the slice as actively pressed. */
@@ -274,10 +257,6 @@ const buildCirclePadStyles = ({ minHeight, pressInMs, releaseMs }) => `
 
   .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
     fill: var(--circle-pad-dark-primary) !important;
-  }
-
-  .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-chevron.is-pressed {
-    stroke: #ffffff !important;
   }
 
   .center-button #path9 {
@@ -505,13 +484,23 @@ class CirclePadControl extends HTMLElement {
     const setPressedVisual = (btn, pressed) => {
       if (!btn) return;
       btn.classList.toggle("is-pressed", pressed);
-      getChevron(btn)?.classList.toggle("is-pressed", pressed);
+      const chevron = getChevron(btn);
+      if (chevron) {
+        chevron.style.stroke = pressed ? "#ffffff" : "#555555";
+        chevron.style.transition = `stroke ${pressed ? pressInMs : releaseMs}ms ${
+          pressed ? "ease-in" : "ease-out"
+        }`;
+      }
     };
 
     const setHoveredVisual = (btn, hovered) => {
       if (!btn) return;
       btn.classList.toggle("is-hovered", hovered);
-      getChevron(btn)?.classList.toggle("is-hovered", hovered);
+      const chevron = getChevron(btn);
+      if (chevron && !btn.classList.contains("is-pressed")) {
+        chevron.style.stroke = hovered ? "#ffffff" : "#555555";
+        chevron.style.transition = `stroke ${releaseMs}ms ease-out`;
+      }
     };
 
     const clearPressed = (btn) => {
@@ -538,9 +527,6 @@ class CirclePadControl extends HTMLElement {
         this.shadowRoot
           .querySelectorAll(".slice-button.is-pressed")
           .forEach((el) => setPressedVisual(el, false));
-        this.shadowRoot
-          .querySelectorAll(".slice-chevron.is-pressed")
-          .forEach((el) => el.classList.remove("is-pressed"));
         return;
       }
 
@@ -561,9 +547,6 @@ class CirclePadControl extends HTMLElement {
       this.shadowRoot
         .querySelectorAll(".slice-button.is-hovered")
         .forEach((el) => setHoveredVisual(el, false));
-      this.shadowRoot
-        .querySelectorAll(".slice-chevron.is-hovered")
-        .forEach((el) => el.classList.remove("is-hovered"));
     };
 
     const syncHoveredFromPoint = (ev) => {
