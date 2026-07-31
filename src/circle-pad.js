@@ -481,124 +481,147 @@ class CirclePadControl extends HTMLElement {
     }
   }
 
+  _findActionButton(target) {
+    if (!(target instanceof Element)) return null;
+    return target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
+  }
+
+  _getButtonAction(btn) {
+    return btn ? btn.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
+  }
+
+  _isMicAction(action) {
+    return action === CIRCLE_PAD_ACTIONS.MIC;
+  }
+
+  _setMicPressed(btn, pressed) {
+    if (!btn) return;
+    btn.classList.toggle("is-pressed", Boolean(pressed));
+  }
+
+  _clearDirectionPressed(btn) {
+    if (!btn) return;
+    const action = this._getButtonAction(btn);
+    if (!action || !this._pressed.has(action)) return;
+    this._pressed.delete(action);
+    btn.classList.remove("is-pressed");
+  }
+
+  _releaseDirectionByPointer(ev) {
+    if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
+      return false;
+    }
+    const state = this._pressedByPointer.get(ev.pointerId);
+    if (!state) return false;
+    this._pressedByPointer.delete(ev.pointerId);
+    this._clearDirectionPressed(state.btn);
+    this._dispatch(EVT_RELEASE, { action: state.action });
+    return true;
+  }
+
+  _setInputModeFromPointer(ev) {
+    this._setInputMode(
+      ev.pointerType === INPUT_MODE_TOUCH ? INPUT_MODE_TOUCH : INPUT_MODE_MOUSE,
+    );
+  }
+
+  _handleDirectionPointerDown(btn, action, pointerId) {
+    if (!DIRECTION_ACTIONS.has(action)) return;
+    if (this._pressed.has(action)) return;
+
+    this._pressed.add(action);
+    if (pointerId !== null && pointerId !== undefined) {
+      this._pressedByPointer.set(pointerId, { action, btn });
+    }
+    btn.classList.add("is-pressed");
+    this._dispatch(EVT_PRESS, { action });
+    this._trySetPointerCapture(btn, pointerId);
+  }
+
+  _handleMicToggleClick(btn) {
+    this._activeMic = !this._activeMic;
+    this._applyMicState();
+    this._setMicPressed(btn, false);
+    this._dispatch(EVT_TOGGLE, {
+      action: CIRCLE_PAD_ACTIONS.MIC,
+      active: this._activeMic,
+    });
+
+    const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
+    if (
+      this._rootEl &&
+      this._rootEl.getAttribute("data-input-mode") === INPUT_MODE_TOUCH &&
+      activeEl &&
+      typeof activeEl.blur === "function"
+    ) {
+      activeEl.blur();
+    }
+  }
+
+  _handlePointerRelease(ev) {
+    if (this._releaseDirectionByPointer(ev)) return;
+
+    const btn = this._findActionButton(ev.target);
+    if (!btn) return;
+    const action = this._getButtonAction(btn);
+
+    if (this._isMicAction(action)) {
+      this._setMicPressed(btn, false);
+      return;
+    }
+
+    if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
+    this._clearDirectionPressed(btn);
+    this._dispatch(EVT_RELEASE, { action });
+  }
+
+  _handlePointerLeave(ev) {
+    if (this._releaseDirectionByPointer(ev)) return;
+
+    const btn = this._findActionButton(ev.target);
+    if (!btn) return;
+    if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+
+    const action = this._getButtonAction(btn);
+    if (this._isMicAction(action)) {
+      this._setMicPressed(btn, false);
+      return;
+    }
+
+    if (!DIRECTION_ACTIONS.has(action)) return;
+    this._clearDirectionPressed(btn);
+    this._dispatch(EVT_RELEASE, { action });
+  }
+
   _wireControlEvents() {
     if (this._wired || !this.shadowRoot) return;
     this._wired = true;
-    const actionSelector = "[" + CIRCLE_PAD_DATA_ACTION + "]";
-
-    const findBtn = (target) =>
-      target instanceof Element ? target.closest(actionSelector) : null;
-
-    const clearPressed = (btn) => {
-      if (!btn) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this._pressed.has(action)) return;
-      this._pressed.delete(action);
-      btn.classList.remove("is-pressed");
-    };
-
-    const setMicPressed = (btn, pressed) => {
-      if (!btn) return;
-      btn.classList.toggle("is-pressed", Boolean(pressed));
-    };
-
-    const releaseByPointer = (ev) => {
-      if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
-        return false;
-      }
-      const state = this._pressedByPointer.get(ev.pointerId);
-      if (!state) return false;
-      this._pressedByPointer.delete(ev.pointerId);
-      clearPressed(state.btn);
-      this._dispatch(EVT_RELEASE, { action: state.action });
-      return true;
-    };
 
     this._onPointerDown = (ev) => {
-      const btn = findBtn(ev.target);
+      const btn = this._findActionButton(ev.target);
       if (!btn) return;
 
-      this._setInputMode(
-        ev.pointerType === INPUT_MODE_TOUCH
-          ? INPUT_MODE_TOUCH
-          : INPUT_MODE_MOUSE,
-      );
+      this._setInputModeFromPointer(ev);
 
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (action === CIRCLE_PAD_ACTIONS.MIC) {
-        setMicPressed(btn, true);
+      const action = this._getButtonAction(btn);
+      if (this._isMicAction(action)) {
+        this._setMicPressed(btn, true);
         this._trySetPointerCapture(btn, ev.pointerId);
         return;
       }
-      if (!DIRECTION_ACTIONS.has(action)) return;
-      if (this._pressed.has(action)) return;
 
-      this._pressed.add(action);
-      if (ev.pointerId !== null && ev.pointerId !== undefined) {
-        this._pressedByPointer.set(ev.pointerId, { action, btn });
-      }
-      btn.classList.add("is-pressed");
-      this._dispatch(EVT_PRESS, { action });
-
-      this._trySetPointerCapture(btn, ev.pointerId);
+      this._handleDirectionPointerDown(btn, action, ev.pointerId);
     };
 
-    const release = (ev) => {
-      if (releaseByPointer(ev)) return;
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (action === CIRCLE_PAD_ACTIONS.MIC) {
-        setMicPressed(btn, false);
-        return;
-      }
-      if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
-      clearPressed(btn);
-      this._dispatch(EVT_RELEASE, { action });
-    };
-
-    this._onPointerUp = release;
-    this._onPointerCancel = release;
-
-    this._onPointerLeave = (ev) => {
-      if (releaseByPointer(ev)) return;
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (action === CIRCLE_PAD_ACTIONS.MIC) {
-        setMicPressed(btn, false);
-        return;
-      }
-      if (!DIRECTION_ACTIONS.has(action)) return;
-      clearPressed(btn);
-      this._dispatch(EVT_RELEASE, { action });
-    };
+    this._onPointerUp = (ev) => this._handlePointerRelease(ev);
+    this._onPointerCancel = (ev) => this._handlePointerRelease(ev);
+    this._onPointerLeave = (ev) => this._handlePointerLeave(ev);
 
     this._onClick = (ev) => {
-      const btn = findBtn(ev.target);
+      const btn = this._findActionButton(ev.target);
       if (!btn) return;
-      if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
-        return;
-      }
-
-      this._activeMic = !this._activeMic;
-      this._applyMicState();
-      setMicPressed(btn, false);
-      this._dispatch(EVT_TOGGLE, {
-        action: CIRCLE_PAD_ACTIONS.MIC,
-        active: this._activeMic,
-      });
-
-      const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
-      if (
-        this._rootEl &&
-        this._rootEl.getAttribute("data-input-mode") === INPUT_MODE_TOUCH &&
-        activeEl &&
-        typeof activeEl.blur === "function"
-      ) {
-        activeEl.blur();
-      }
+      if (!this._isMicAction(this._getButtonAction(btn))) return;
+      this._handleMicToggleClick(btn);
     };
 
     this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
