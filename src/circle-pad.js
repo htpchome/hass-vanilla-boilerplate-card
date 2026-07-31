@@ -48,7 +48,85 @@ const EVT_PRESS = "circle-pad-press";
 const EVT_RELEASE = "circle-pad-release";
 const EVT_TOGGLE = "circle-pad-toggle";
 
-const CIRCLE_PAD_STYLES = `
+const SLICE_DEFS = Object.freeze([
+  {
+    action: CIRCLE_PAD_ACTIONS.RIGHT,
+    label: "Right",
+    wedgePath:
+      "m 139.38408,44.790631 a 47.849998,47.849998 0 0 1 0,44.189339 L 96.940613,66.8853 Z",
+    chevronPath: "M 131.0 64.88 L 133.0 66.88 L 131.0 68.88",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.DOWN_RIGHT,
+    label: "Down-right",
+    wedgePath:
+      "m 139.38408,88.97997 a 47.849998,47.849998 0 0 1 -20.3488,20.3488 L 96.940613,66.8853 Z",
+    chevronPath: "M 116.5 88.5 L 118.5 88.5 L 118.5 86.5",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.DOWN,
+    label: "Down",
+    wedgePath:
+      "m 119.03528,109.32877 a 47.849998,47.849998 0 0 1 -44.189339,0 L 96.940613,66.8853 Z",
+    chevronPath: "M 98.94 103.5 L 96.94 105.5 L 94.94 103.5",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.UP_RIGHT,
+    label: "Up-right",
+    wedgePath:
+      "m 119.03528,24.441832 a 47.849998,47.849998 0 0 1 20.3488,20.348799 L 96.940613,66.8853 Z",
+    chevronPath: "M 116.5 45.26 L 118.5 45.26 L 118.5 47.26",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.UP,
+    label: "Up",
+    wedgePath:
+      "m 74.845941,24.441833 a 47.849998,47.849998 0 0 1 44.189339,-10e-7 L 96.940613,66.8853 Z",
+    chevronPath: "M 94.94 30.26 L 96.94 28.26 L 98.94 30.26",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.UP_LEFT,
+    label: "Up-left",
+    wedgePath:
+      "M 54.497146,44.790629 A 47.849998,47.849998 0 0 1 74.845941,24.441833 L 96.940613,66.8853 Z",
+    chevronPath: "M 77.38 45.26 L 75.38 45.26 L 75.38 47.26",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.DOWN_LEFT,
+    label: "Down-left",
+    wedgePath:
+      "M 74.845941,109.32877 A 47.849998,47.849998 0 0 1 54.497146,88.979971 L 96.940613,66.8853 Z",
+    chevronPath: "M 77.38 88.5 L 75.38 88.5 L 75.38 86.5",
+  },
+  {
+    action: CIRCLE_PAD_ACTIONS.LEFT,
+    label: "Left",
+    wedgePath:
+      "m 54.497146,88.979971 a 47.849998,47.849998 0 0 1 0,-44.189342 L 96.940613,66.8853 Z",
+    chevronPath: "M 62.88 68.88 L 60.88 66.88 L 62.88 64.88",
+  },
+]);
+
+const renderSliceButtons = () =>
+  SLICE_DEFS.map(
+    (slice) =>
+      '<g class="wheel-button slice-button" role="button" tabindex="0" aria-label="' +
+      slice.label +
+      '" ' +
+      CIRCLE_PAD_DATA_ACTION +
+      '="' +
+      slice.action +
+      '">' +
+      '<path d="' +
+      slice.wedgePath +
+      '"></path>' +
+      '<path class="slice-chevron" d="' +
+      slice.chevronPath +
+      '" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      "</g>",
+  ).join("");
+
+const buildCirclePadStyles = () => `
   :host {
     display: block;
     --circle-pad-bg-1: var(--primary-background-color);
@@ -229,7 +307,7 @@ const CIRCLE_PAD_STYLES = `
   }
 `;
 
-const CIRCLE_PAD_SVG = `
+const buildCirclePadSvg = () => `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
     <svg viewBox="0 0 96 96" version="1.1" aria-label="Circle pad" role="group">
       <defs>
@@ -281,46 +359,7 @@ const CIRCLE_PAD_SVG = `
 
       <g id="main-circle" class="main-circle" transform="translate(-48.940613,-18.8853)">
         <circle style="fill:#646464;" id="circle2" cx="96.940613" cy="66.8853" r="47.85"></circle>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Right" ${CIRCLE_PAD_DATA_ACTION}="right">
-          <path d="m 139.38408,44.790631 a 47.849998,47.849998 0 0 1 0,44.189339 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 131.0 64.88 L 133.0 66.88 L 131.0 68.88" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down-right" ${CIRCLE_PAD_DATA_ACTION}="down-right">
-          <path d="m 139.38408,88.97997 a 47.849998,47.849998 0 0 1 -20.3488,20.3488 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 116.5 88.5 L 118.5 88.5 L 118.5 86.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down" ${CIRCLE_PAD_DATA_ACTION}="down">
-          <path d="m 119.03528,109.32877 a 47.849998,47.849998 0 0 1 -44.189339,0 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 98.94 103.5 L 96.94 105.5 L 94.94 103.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up-right" ${CIRCLE_PAD_DATA_ACTION}="up-right">
-          <path d="m 119.03528,24.441832 a 47.849998,47.849998 0 0 1 20.3488,20.348799 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 116.5 45.26 L 118.5 45.26 L 118.5 47.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up" ${CIRCLE_PAD_DATA_ACTION}="up">
-          <path d="m 74.845941,24.441833 a 47.849998,47.849998 0 0 1 44.189339,-10e-7 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 94.94 30.26 L 96.94 28.26 L 98.94 30.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Up-left" ${CIRCLE_PAD_DATA_ACTION}="up-left">
-          <path d="M 54.497146,44.790629 A 47.849998,47.849998 0 0 1 74.845941,24.441833 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 77.38 45.26 L 75.38 45.26 L 75.38 47.26" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Down-left" ${CIRCLE_PAD_DATA_ACTION}="down-left">
-          <path d="M 74.845941,109.32877 A 47.849998,47.849998 0 0 1 54.497146,88.979971 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 77.38 88.5 L 75.38 88.5 L 75.38 86.5" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
-
-        <g class="wheel-button slice-button" role="button" tabindex="0" aria-label="Left" ${CIRCLE_PAD_DATA_ACTION}="left">
-          <path d="m 54.497146,88.979971 a 47.849998,47.849998 0 0 1 0,-44.189342 L 96.940613,66.8853 Z"></path>
-          <path class="slice-chevron" d="M 62.88 68.88 L 60.88 66.88 L 62.88 64.88" fill="none" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </g>
+        ${renderSliceButtons()}
       </g>
 
       <g id="mic-button" transform="translate(-48.940613,-18.8853)">
@@ -347,7 +386,7 @@ class CirclePadControl extends HTMLElement {
     this._pressedByPointer = new Map();
     this._activeMic = false;
     this._mounted = false;
-    this._wired = false;
+    this._eventsAbort = null;
   }
 
   connectedCallback() {
@@ -357,6 +396,11 @@ class CirclePadControl extends HTMLElement {
 
   disconnectedCallback() {
     this._pressed.clear();
+    this._pressedByPointer.clear();
+    if (this._eventsAbort) {
+      this._eventsAbort.abort();
+      this._eventsAbort = null;
+    }
   }
 
   setActive(action, active) {
@@ -374,11 +418,11 @@ class CirclePadControl extends HTMLElement {
     this._mounted = true;
 
     const style = document.createElement("style");
-    style.textContent = CIRCLE_PAD_STYLES;
+    style.textContent = buildCirclePadStyles();
 
     const root = document.createElement("div");
     root.className = CIRCLE_PAD_CLASS;
-    root.innerHTML = CIRCLE_PAD_SVG;
+    root.innerHTML = buildCirclePadSvg();
     this._rootEl = root;
 
     this.shadowRoot.appendChild(style);
@@ -387,8 +431,9 @@ class CirclePadControl extends HTMLElement {
   }
 
   _wireEvents() {
-    if (this._wired || !this.shadowRoot) return;
-    this._wired = true;
+    if (this._eventsAbort || !this.shadowRoot) return;
+    this._eventsAbort = new AbortController();
+    const listenerOpts = { signal: this._eventsAbort.signal };
 
     const findBtn = (target) =>
       target instanceof Element
@@ -427,29 +472,33 @@ class CirclePadControl extends HTMLElement {
       this._dispatch(EVT_PRESS, { action });
     };
 
-    this.shadowRoot.addEventListener("pointerdown", (ev) => {
-      if (ev.pointerType === "touch") {
-        this._setInputMode("touch");
-      } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
-        this._setInputMode("mouse");
-      }
-
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-      pressDirection(btn, ev.pointerId);
-      if (
-        typeof btn.setPointerCapture === "function" &&
-        ev.pointerId !== null
-      ) {
-        try {
-          btn.setPointerCapture(ev.pointerId);
-        } catch (_e) {
-          /* ignore */
+    this.shadowRoot.addEventListener(
+      "pointerdown",
+      (ev) => {
+        if (ev.pointerType === "touch") {
+          this._setInputMode("touch");
+        } else if (ev.pointerType === "mouse" || ev.pointerType === "pen") {
+          this._setInputMode("mouse");
         }
-      }
-    });
+
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
+        pressDirection(btn, ev.pointerId);
+        if (
+          typeof btn.setPointerCapture === "function" &&
+          ev.pointerId !== null
+        ) {
+          try {
+            btn.setPointerCapture(ev.pointerId);
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      },
+      listenerOpts,
+    );
 
     const release = (ev) => {
       if (releaseByPointer(ev)) return;
@@ -460,53 +509,71 @@ class CirclePadControl extends HTMLElement {
       clearPressed(btn);
       this._dispatch(EVT_RELEASE, { action });
     };
-    this.shadowRoot.addEventListener("pointerup", release);
-    this.shadowRoot.addEventListener("pointercancel", release);
+    this.shadowRoot.addEventListener("pointerup", release, listenerOpts);
+    this.shadowRoot.addEventListener("pointercancel", release, listenerOpts);
 
-    this.shadowRoot.addEventListener("pointerleave", (ev) => {
-      if (releaseByPointer(ev)) return;
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this._pressed.has(action)) return;
-      clearPressed(btn);
-      this._dispatch(EVT_RELEASE, { action });
-    });
+    this.shadowRoot.addEventListener(
+      "pointerleave",
+      (ev) => {
+        if (releaseByPointer(ev)) return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      },
+      listenerOpts,
+    );
 
-    this.shadowRoot.addEventListener("keydown", (ev) => {
-      if (ev.key !== "Enter" && ev.key !== " ") return;
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (action === CIRCLE_PAD_ACTIONS.MIC) return;
-      ev.preventDefault();
-      pressDirection(btn, null);
-    });
+    this.shadowRoot.addEventListener(
+      "keydown",
+      (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) return;
+        ev.preventDefault();
+        pressDirection(btn, null);
+      },
+      listenerOpts,
+    );
 
-    this.shadowRoot.addEventListener("keyup", (ev) => {
-      if (ev.key !== "Enter" && ev.key !== " ") return;
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
-      if (!this._pressed.has(action)) return;
-      clearPressed(btn);
-      this._dispatch(EVT_RELEASE, { action });
-    });
+    this.shadowRoot.addEventListener(
+      "keyup",
+      (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (!this._pressed.has(action)) return;
+        clearPressed(btn);
+        this._dispatch(EVT_RELEASE, { action });
+      },
+      listenerOpts,
+    );
 
-    this.shadowRoot.addEventListener("click", (ev) => {
-      const btn = findBtn(ev.target);
-      if (!btn) return;
-      if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
-        return;
-      }
-      this._activeMic = !this._activeMic;
-      this._applyMicState();
-      this._dispatch(EVT_TOGGLE, {
-        action: CIRCLE_PAD_ACTIONS.MIC,
-        active: this._activeMic,
-      });
-    });
+    this.shadowRoot.addEventListener(
+      "click",
+      (ev) => {
+        const btn = findBtn(ev.target);
+        if (!btn) return;
+        if (
+          btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC
+        ) {
+          return;
+        }
+        this._activeMic = !this._activeMic;
+        this._applyMicState();
+        this._dispatch(EVT_TOGGLE, {
+          action: CIRCLE_PAD_ACTIONS.MIC,
+          active: this._activeMic,
+        });
+      },
+      listenerOpts,
+    );
   }
 
   _applyMicState() {
