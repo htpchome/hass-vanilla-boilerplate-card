@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.78";
+  const CARD_VERSION = "0.1.79";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -1965,6 +1965,15 @@
   filter: url(#button-shadow) !important;
 }
 
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active):not(.is-pressed) #path9 {
+  fill: #bababa !important;
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-active #path9,
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-pressed #path9 {
+  fill: var(--circle-pad-success) !important;
+}
+
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-active #circle9 {
   fill: url(#dome-gradient-green) !important;
   filter: url(#button-shadow-hover) !important;
@@ -2199,6 +2208,11 @@
         btn.classList.remove("is-pressed");
       };
 
+      const setMicPressed = (btn, pressed) => {
+        if (!btn) return;
+        btn.classList.toggle("is-pressed", Boolean(pressed));
+      };
+
       const releaseByPointer = (ev) => {
         if (!ev || ev.pointerId === null || ev.pointerId === undefined) {
           return false;
@@ -2218,6 +2232,21 @@
         this._setInputMode(ev.pointerType === "touch" ? "touch" : "mouse");
 
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) {
+          setMicPressed(btn, true);
+          if (
+            typeof btn.setPointerCapture === "function" &&
+            ev.pointerId !== null &&
+            ev.pointerId !== undefined
+          ) {
+            try {
+              btn.setPointerCapture(ev.pointerId);
+            } catch (_e) {
+              /* ignore */
+            }
+          }
+          return;
+        }
         if (!DIRECTION_ACTIONS.has(action)) return;
         if (this._pressed.has(action)) return;
 
@@ -2246,6 +2275,10 @@
         const btn = findBtn(ev.target);
         if (!btn) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) {
+          setMicPressed(btn, false);
+          return;
+        }
         if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
@@ -2260,6 +2293,10 @@
         if (!btn) return;
         if (ev.relatedTarget && btn.contains(ev.relatedTarget)) return;
         const action = btn.getAttribute(CIRCLE_PAD_DATA_ACTION);
+        if (action === CIRCLE_PAD_ACTIONS.MIC) {
+          setMicPressed(btn, false);
+          return;
+        }
         if (!DIRECTION_ACTIONS.has(action)) return;
         clearPressed(btn);
         this._dispatch(EVT_RELEASE, { action });
@@ -2274,6 +2311,7 @@
 
         this._activeMic = !this._activeMic;
         this._applyMicState();
+        setMicPressed(btn, false);
         this._dispatch(EVT_TOGGLE, {
           action: CIRCLE_PAD_ACTIONS.MIC,
           active: this._activeMic,
