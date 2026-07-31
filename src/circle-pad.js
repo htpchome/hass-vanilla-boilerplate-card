@@ -118,7 +118,6 @@ const CIRCLE_PAD_STYLES = `
 .center-button #circle9 { fill: url(#dome-gradient);   }
 .center-button:hover #circle9 { filter: url(#button-shadow-hover);  }
 .center-button:hover #path9 { fill: var(--circle-pad-success); }
-.center-button:focus #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
 
 /* Persistent mic-on visuals driven by component state */

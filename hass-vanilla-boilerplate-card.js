@@ -1,5 +1,5 @@
 (function () {
-  "use strict";
+  'use strict';
 
   /**
    * constants.js
@@ -11,7 +11,7 @@
    */
 
   // ---------- Card identity ----------
-  const CARD_VERSION = "0.1.73";
+  const CARD_VERSION = "0.1.74";
   const CARD_TYPE = "hass-vanilla-boilerplate-card";
   const CARD_NAME = "HASS Vanilla Boilerplate Card";
   const CARD_DESCRIPTION =
@@ -71,6 +71,7 @@
    * ---------------------------------------------------------------
    */
 
+
   /**
    * Safe HTML escape — used whenever user-supplied text must be
    * inserted into a template literal as text content.
@@ -81,16 +82,16 @@
   // Entity lookup table built from String.fromCharCode to avoid any
   // tool that might mangle literal HTML entities in source files.
   const HTML_ENTITIES = {
-    "&": String.fromCharCode(38, 97, 109, 112, 59), // &
-    "<": String.fromCharCode(38, 108, 116, 59), // <
-    ">": String.fromCharCode(38, 103, 116, 59), // >
+    '&': String.fromCharCode(38, 97, 109, 112, 59),   // &
+    '<': String.fromCharCode(38, 108, 116, 59),        // <
+    '>': String.fromCharCode(38, 103, 116, 59),        // >
     '"': String.fromCharCode(38, 113, 117, 111, 116, 59), // "
-    "'": String.fromCharCode(38, 35, 51, 57, 59), // &#39;
+    "'": String.fromCharCode(38, 35, 51, 57, 59),      // &#39;
   };
   const ESCAPE_PATTERN = /[&<>"']/g;
 
   const escapeHtml$1 = (value) => {
-    if (value === null || value === undefined) return "";
+    if (value === null || value === undefined) return '';
     return String(value).replace(ESCAPE_PATTERN, (ch) => HTML_ENTITIES[ch]);
   };
 
@@ -106,7 +107,7 @@
    * @returns {boolean}
    */
   const isValidConfig = (config) =>
-    config !== null && typeof config === "object" && !Array.isArray(config);
+    config !== null && typeof config === 'object' && !Array.isArray(config);
 
   /**
    * Merge a partial config with defaults so downstream code can rely
@@ -130,8 +131,8 @@
   const hasEntity = (hass, entityId) =>
     Boolean(
       hass &&
-      hass.states &&
-      Object.prototype.hasOwnProperty.call(hass.states, entityId),
+        hass.states &&
+        Object.prototype.hasOwnProperty.call(hass.states, entityId),
     );
 
   // ----------------------------------------------------------------
@@ -181,10 +182,10 @@
    */
   const fireHassAction = (node, action, actionConfig) => {
     const config =
-      actionConfig && typeof actionConfig === "object"
+      actionConfig && typeof actionConfig === 'object'
         ? actionConfig
-        : { action: "none" };
-    fireEvent(node, "hass-action", { action, config });
+        : { action: 'none' };
+    fireEvent(node, 'hass-action', { action, config });
   };
 
   // ----------------------------------------------------------------
@@ -228,11 +229,7 @@
    */
   const assertValidConfig = (config) => {
     if (!isValidConfig(config)) {
-      warnOnce(
-        ERROR_KEYS.INVALID_CONFIG,
-        "Invalid card config received:",
-        config,
-      );
+      warnOnce(ERROR_KEYS.INVALID_CONFIG, 'Invalid card config received:', config);
       return false;
     }
     return true;
@@ -253,6 +250,7 @@
    *   - it notifies subscribers via a tiny pub/sub
    * ---------------------------------------------------------------
    */
+
 
   class Router {
     constructor(initial = LAYOUTS.MAIN) {
@@ -346,6 +344,7 @@
    * or "what should I do when the user clicks?".
    * ---------------------------------------------------------------
    */
+
 
   /**
    * Controller — pure logic, no DOM. Created per-card-instance.
@@ -762,13 +761,7 @@
    * @param {string} [activeIconKey] optional alt icon for toggles
    * @returns {string} raw HTML
    */
-  const buildButtonHtml$1 = (
-    action,
-    extraClass,
-    iconKey,
-    label,
-    activeIconKey,
-  ) => {
+  const buildButtonHtml$1 = (action, extraClass, iconKey, label, activeIconKey) => {
     let inner = renderDpadIcon$1(iconKey, {
       className: DPAD_BTN_CLASS + "__icon dpad__icon--default",
     });
@@ -1362,13 +1355,7 @@
    * @param {string} [activeIconKey] optional alt icon for toggles
    * @returns {string} raw HTML
    */
-  const buildButtonHtml = (
-    action,
-    extraClass,
-    iconKey,
-    label,
-    activeIconKey,
-  ) => {
+  const buildButtonHtml = (action, extraClass, iconKey, label, activeIconKey) => {
     let inner = renderDpadIcon(iconKey, {
       className: DPAD_8WAY_BTN_CLASS + "__icon dpad-8way__icon--default",
     });
@@ -1846,7 +1833,6 @@
 .center-button #circle9 { fill: url(#dome-gradient);   }
 .center-button:hover #circle9 { filter: url(#button-shadow-hover);  }
 .center-button:hover #path9 { fill: var(--circle-pad-success); }
-.center-button:focus #path9 { fill: var(--circle-pad-success); }
 .center-button:active #path9 { fill: var(--circle-pad-success); }
 
 /* Persistent mic-on visuals driven by component state */
@@ -2123,9 +2109,7 @@
         if (!(target instanceof Element)) return;
         const btn = target.closest("[" + CIRCLE_PAD_DATA_ACTION + "]");
         if (!btn) return;
-        if (
-          btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC
-        ) {
+        if (btn.getAttribute(CIRCLE_PAD_DATA_ACTION) !== CIRCLE_PAD_ACTIONS.MIC) {
           return;
         }
 
@@ -2523,9 +2507,7 @@
         RELEASE_EVENTS.forEach((evt) =>
           dpadEl.removeEventListener(evt, onRelease),
         );
-        TOGGLE_EVENTS.forEach((evt) =>
-          dpadEl.removeEventListener(evt, onToggle),
-        );
+        TOGGLE_EVENTS.forEach((evt) => dpadEl.removeEventListener(evt, onToggle));
         this._stopAllRepeaters();
       };
       this._unsubscribers.push(off);
@@ -2607,8 +2589,7 @@
 
     _render() {
       const logEl =
-        this.shadowRoot &&
-        this.shadowRoot.querySelector("." + READOUT_LOG_CLASS);
+        this.shadowRoot && this.shadowRoot.querySelector("." + READOUT_LOG_CLASS);
       if (!logEl) return;
 
       if (this._log.length === 0) {
@@ -2701,6 +2682,7 @@
    * view's content area; it has no knowledge of the dpad internals.
    * ---------------------------------------------------------------
    */
+
 
   // Numeric page navigation rendered in the top-left of every
   // card header. Four buttons labeled (1) (2) (3) (4). The button
@@ -2913,11 +2895,7 @@
    * @returns {string} raw HTML
    */
   const buildFooter = (vm) =>
-    '<div class="' +
-    REGIONS.FOOTER +
-    '">v' +
-    escapeHtml$1(vm.version) +
-    "</div>";
+    '<div class="' + REGIONS.FOOTER + '">v' + escapeHtml$1(vm.version) + "</div>";
 
   // ----------------------------------------------------------------
   // Top-level factory
@@ -3240,6 +3218,7 @@
    * ---------------------------------------------------------------
    */
 
+
   class HassVanillaBoilerplateCard extends HTMLElement {
     constructor() {
       super();
@@ -3264,9 +3243,7 @@
       this._unsubController = this._controller.subscribe(() =>
         this._scheduleRender(),
       );
-      this._unsubRouter = this._router.onViewChange(() =>
-        this._scheduleRender(),
-      );
+      this._unsubRouter = this._router.onViewChange(() => this._scheduleRender());
       this._scheduleRender();
     }
 
@@ -3466,10 +3443,7 @@
           // chrome outside the dpad.)
           host.addEventListener("click", (ev) => {
             const target = ev.target;
-            if (
-              target instanceof Element &&
-              target.closest("[data-page-nav]")
-            ) {
+            if (target instanceof Element && target.closest("[data-page-nav]")) {
               return; // page nav click — handled above
             }
             this._controller.handleClick(this, ev);
@@ -3615,4 +3589,5 @@
       `${CARD_NAME} registered.`,
     );
   }
+
 })();
